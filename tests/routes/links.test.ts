@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -13,7 +14,9 @@ import { describe, expect, it } from "vitest";
  * that typecheck, lint and the build all passed happily.
  */
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+// fileURLToPath, not .pathname: .pathname keeps percent-encoding, so a repo
+// path containing a space (like this one) would never resolve on disk.
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const APP_DIR = join(ROOT, "app");
 
 function walk(dir: string): string[] {

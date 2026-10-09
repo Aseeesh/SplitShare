@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 import { defineConfig } from "vitest/config";
 
 const coverage = {
@@ -40,10 +42,11 @@ export default defineConfig({
         resolve: {
           tsconfigPaths: true,
           alias: {
-            "server-only": new URL(
-              "./tests/integration/server-only-stub.ts",
-              import.meta.url,
-            ).pathname,
+            // fileURLToPath, not .pathname: .pathname keeps percent-encoding,
+            // so a repo path containing a space would never resolve.
+            "server-only": fileURLToPath(
+              new URL("./tests/integration/server-only-stub.ts", import.meta.url),
+            ),
           },
         },
         test: {
