@@ -47,7 +47,6 @@ jobs:
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-      EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
     steps:
       - uses: actions/checkout@v4
@@ -75,5 +74,4 @@ jobs:
             GOOGLE_CLIENT_ID
             GOOGLE_CLIENT_SECRET
             AUTH_SECRET
-            EMAIL_API_KEY
             CRON_SECRET
