@@ -20,19 +20,6 @@
       "service": "splitshare"
     }
   ],
-  "r2_buckets": [
-    {
-      // OpenNext incremental cache.
-      "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "splitshare-opennext-cache"
-    },
-    {
-      // Receipt storage (§ src/lib/storage/index.ts). Private by default —
-      // only the worker binding can read it.
-      "binding": "RECEIPTS",
-      "bucket_name": "splitshare-receipts"
-    }
-  ],
   "triggers": {
     "crons": ["0 * * * *"]
   },

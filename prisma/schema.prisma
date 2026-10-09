@@ -540,9 +540,13 @@ model FileUpload {
   householdId      String   @map("household_id") @db.Uuid
   uploadedByUserId String   @map("uploaded_by_user_id") @db.Uuid
   url              String
-  pathname         String
   contentType      String   @map("content_type") @db.VarChar(120)
   sizeBytes        Int      @map("size_bytes")
+  // The receipt bytes themselves. Never select `data` in a list query — use
+  // `Expense.receiptFileId` for existence checks so list views don't drag the
+  // blob out of Postgres. Served only via /api/receipts/[fileId] behind the
+  // membership guard.
+  data             Bytes    @db.ByteA
   createdAt        DateTime @default(now()) @map("created_at")
 
   household  Household @relation(fields: [householdId], references: [id], onDelete: Cascade)

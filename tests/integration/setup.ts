@@ -56,16 +56,14 @@ vi.mock("react", async (importOriginal) => {
   return { ...actual, cache: <T>(fn: T) => fn };
 });
 
-// The one external service these tests cannot reach — R2. The real module
-// resolves its store through getCloudflareContext, which does not exist under
-// vitest, so the whole module is stubbed.
+// The storage module writes receipts to Postgres; stubbed here so these tests
+// need no database writes for the upload path.
 vi.mock("@/lib/storage", () => ({
   uploadReceipt: async () => ({
     fileId: "test-file",
-    pathname: "receipts/test-household/test-file.jpg",
     contentType: "image/jpeg",
     sizeBytes: 8,
   }),
-  getReceiptObject: async () => null,
+  getReceiptBytes: async () => null,
   deleteReceipt: async () => undefined,
 }));

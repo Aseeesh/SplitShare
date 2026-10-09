@@ -4,7 +4,6 @@ import {
   ALLOWED_RECEIPT_TYPES,
   DEFAULT_MAX_UPLOAD_BYTES,
   maxUploadBytes,
-  receiptPathname,
   sniffContentType,
   UploadError,
   validateReceipt,
@@ -151,12 +150,6 @@ describe("validateReceipt", () => {
         }),
       "TOO_LARGE",
     );
-  });
-});
-
-describe("receiptPathname", () => {
-  it("namespaces by household and keys by file id", () => {
-    expect(receiptPathname("h-1", "f-2", "jpg")).toBe("receipts/h-1/f-2.jpg");
   });
 });
 

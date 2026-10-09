@@ -127,20 +127,6 @@ export function validateReceipt(input: {
   return { contentType: actual, extension: ALLOWED_RECEIPT_TYPES[actual], sizeBytes };
 }
 
-/**
- * Where a receipt lives in the blob store.
- *
- * Namespaced by household so a store listing is at least grouped sensibly, and
- * keyed by a server-generated id so nothing a user typed reaches the path.
- */
-export function receiptPathname(
-  householdId: string,
-  fileId: string,
-  extension: string,
-): string {
-  return `receipts/${householdId}/${fileId}.${extension}`;
-}
-
 /** Reads MAX_UPLOAD_BYTES, falling back to the default when unset or junk. */
 export function maxUploadBytes(raw: string | undefined): number {
   const parsed = Number(raw);

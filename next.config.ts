@@ -1,8 +1,8 @@
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import type { NextConfig } from "next";
 
-// Gives `getCloudflareContext()` (R2 bindings etc.) something to resolve to
-// while running plain `next dev`; a no-op everywhere else.
+// Gives `getCloudflareContext()` something to resolve to while running plain
+// `next dev`; a no-op everywhere else.
 initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {

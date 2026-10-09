@@ -20,7 +20,7 @@ beforeEach(() => {
 
 afterEach(() => {
   if (original === undefined) {
-    delete process.env.CRON_SECRET;
+    Reflect.deleteProperty(process.env, "CRON_SECRET");
   } else {
     process.env.CRON_SECRET = original;
   }
@@ -53,7 +53,7 @@ describe("cron authorization", () => {
   it("refuses everything when CRON_SECRET is unset", async () => {
     // An unset secret must not mean "allow everyone". A cron that does not run
     // is recoverable; an open endpoint that sends email is not.
-    delete process.env.CRON_SECRET;
+    Reflect.deleteProperty(process.env, "CRON_SECRET");
     expect((await GET(request())).status).toBe(401);
     expect((await GET(request("Bearer "))).status).toBe(401);
     expect((await GET(request("Bearer undefined"))).status).toBe(401);
