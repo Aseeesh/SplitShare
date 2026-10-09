@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# downloaded OAuth / cloud credential JSON (Google client_secret.json, etc.)
+client_secret.json
+*_client_secret*.json
+
 # vercel
 .vercel
 
