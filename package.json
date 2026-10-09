@@ -23,14 +23,19 @@
     "db:seed": "prisma db seed --config ./prisma7.config.ts",
     "format:check": "prettier --check .",
     "prepare": "husky",
-    "postinstall": "prisma generate --config ./prisma7.config.ts"
+    "postinstall": "prisma generate --config ./prisma7.config.ts",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && wrangler deploy",
+    "cf:typegen": "wrangler types --include-runtime=false && printf '/// <reference types=\"@cloudflare/workers-types\" />\\n' | cat - worker-configuration.d.ts > .tmp-types && mv .tmp-types worker-configuration.d.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
     "@hookform/resolvers": "^5.9.1",
+    "@opennextjs/cloudflare": "^1.20.9",
+    "@prisma/adapter-neon": "7.10.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
-    "@vercel/blob": "^2.8.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
@@ -38,6 +43,7 @@
     "lucide-react": "^1.52.0",
     "next": "16.3.8",
     "next-auth": "5.0.0-beta.32",
+    "pg-cloudflare": "^1.4.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.89.0",
@@ -47,6 +53,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261008.1",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
@@ -69,7 +76,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "wrangler": "^4.149.0"
   },
   "packageManager": "pnpm@12.9.1",
   "lint-staged": {

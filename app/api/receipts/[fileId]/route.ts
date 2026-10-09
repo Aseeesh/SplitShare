@@ -1,15 +1,15 @@
-import { get } from "@vercel/blob";
-
 import { assertBelongsToHousehold, requireHouseholdMember } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/client";
+import { getReceiptObject } from "@/lib/storage";
 
 /**
  * Serves a receipt.
  *
- * Receipts are stored as private blobs, so this is the only way to read one —
- * and it re-runs the §2.4 guard chain on every request rather than trusting an
- * unguessable URL. Membership is checked against the household the file belongs
- * to, so knowing a file id is not enough.
+ * Receipts live in a private R2 bucket with no public URL, so this is the
+ * only way to read one — and it re-runs the §2.4 guard chain on every request
+ * rather than trusting an unguessable object key. Membership is checked
+ * against the household the file belongs to, so knowing a file id is not
+ * enough.
  */
 export async function GET(
   _request: Request,
@@ -36,16 +36,16 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  // Null when the blob is gone — a `file_uploads` row can outlive its blob,
-  // which is the recoverable direction of that inconsistency.
-  const result = await get(file.pathname, { access: "private" });
-  if (!result?.stream) {
+  // Null when the object is gone — a `file_uploads` row can outlive its
+  // object, which is the recoverable direction of that inconsistency.
+  const result = await getReceiptObject(file.pathname);
+  if (!result) {
     return new Response("Not found", { status: 404 });
   }
 
-  return new Response(result.stream, {
+  return new Response(result.body, {
     headers: {
-      "Content-Type": result.blob.contentType ?? file.contentType,
+      "Content-Type": result.contentType ?? file.contentType,
       // Private to this viewer, and never stored by a shared cache.
       "Cache-Control": "private, max-age=3600, no-transform",
       "Content-Disposition": "inline",

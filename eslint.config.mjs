@@ -18,6 +18,11 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "blob-report/**",
+    // Cloudflare/OpenNext build artifacts and local state.
+    ".open-next/**",
+    ".wrangler/**",
+    ".receipts/**",
+    "worker-configuration.d.ts",
   ]),
 ]);
 

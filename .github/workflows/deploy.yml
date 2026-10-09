@@ -1,13 +1,12 @@
-name: Verify & deploy to Vercel
+name: Verify & deploy to Cloudflare
 
-# SplitHome CI/CD. Every push to main runs the §41 gates, then builds and
-# deploys to Vercel production. Database and OAuth secrets never enter this
-# repo or GitHub: they live in the Vercel project env and are pulled into the
-# build by `vercel pull`. GitHub secrets hold only VERCEL_TOKEN, VERCEL_ORG_ID
-# and VERCEL_PROJECT_ID.
-#
-# `postinstall` runs `prisma generate`, so the generated client exists before
-# typecheck and build.
+# SplitHome CI/CD. Every push to main runs the §41 gates, applies pending
+# Prisma migrations to Neon (DIRECT_URL), builds the OpenNext worker and
+# deploys it to Cloudflare Workers. GitHub holds the infrastructure secrets
+# (Cloudflare token, database and OAuth credentials); wrangler-action pushes
+# the worker secrets during the same deploy, so they are never written to
+# the repo. `postinstall` runs `prisma generate`, so both generated clients
+# exist before typecheck and build.
 
 on:
   push:
@@ -37,12 +36,19 @@ jobs:
         run: pnpm test
 
   deploy:
-    name: Deploy to Vercel (production)
+    name: Deploy to Cloudflare Workers (production)
     needs: verify
     runs-on: ubuntu-latest
     env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      DATABASE_DRIVER: neon
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -54,11 +60,20 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
-      - name: Install Vercel CLI
-        run: npm i -g vercel@latest
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Apply database migrations
+        run: pnpm prisma:deploy
       - name: Build
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: pnpm exec opennextjs-cloudflare build
       - name: Deploy
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          secrets: |
+            DATABASE_URL
+            GOOGLE_CLIENT_ID
+            GOOGLE_CLIENT_SECRET
+            AUTH_SECRET
+            EMAIL_API_KEY
+            CRON_SECRET

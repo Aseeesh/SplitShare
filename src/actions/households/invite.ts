@@ -65,7 +65,7 @@ export async function inviteMember(
           householdId: data.householdId,
           email: data.email,
           role: data.role,
-          tokenHash: hashInvitationToken(token),
+          tokenHash: await hashInvitationToken(token),
           invitedByUserId: membership.userId,
           expiresAt: invitationExpiresAt(now),
         },

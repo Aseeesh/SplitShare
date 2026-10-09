@@ -56,13 +56,16 @@ vi.mock("react", async (importOriginal) => {
   return { ...actual, cache: <T>(fn: T) => fn };
 });
 
-// The one external service these tests cannot reach.
-vi.mock("@vercel/blob", () => ({
-  put: async (pathname: string) => ({
-    url: `https://blob.test/${pathname}`,
-    pathname,
+// The one external service these tests cannot reach — R2. The real module
+// resolves its store through getCloudflareContext, which does not exist under
+// vitest, so the whole module is stubbed.
+vi.mock("@/lib/storage", () => ({
+  uploadReceipt: async () => ({
+    fileId: "test-file",
+    pathname: "receipts/test-household/test-file.jpg",
     contentType: "image/jpeg",
+    sizeBytes: 8,
   }),
-  del: async () => undefined,
-  get: async () => null,
+  getReceiptObject: async () => null,
+  deleteReceipt: async () => undefined,
 }));

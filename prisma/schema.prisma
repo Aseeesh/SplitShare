@@ -15,6 +15,19 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  // Targets the Cloudflare Workers runtime (alias: "cloudflare"). The generated
+  // client then uses Web-standard APIs and `@prisma/client/runtime/
+  // wasm-compiler-edge`, which plain Node/tsx cannot load — so anything that
+  // runs under Node (seed, DB tests) imports the `client-node` generator below.
+  runtime = "workerd"
+}
+
+// Node-runtime twin of the generator above, for tsx/vitest/seed. The two
+// clients share one schema, so their types are structurally interchangeable.
+generator client-node {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-node"
+  runtime  = "nodejs"
 }
 
 datasource db {

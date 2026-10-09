@@ -36,7 +36,7 @@ export async function acceptInvitation(
     const data = acceptInvitationSchema.parse(input);
 
     const invitation = await prisma.invitation.findUnique({
-      where: { tokenHash: hashInvitationToken(data.token) },
+      where: { tokenHash: await hashInvitationToken(data.token) },
       select: {
         id: true,
         householdId: true,

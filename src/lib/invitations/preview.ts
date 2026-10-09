@@ -37,7 +37,7 @@ export async function previewInvitation(token: string): Promise<InvitationPrevie
   }
 
   const invitation = await prisma.invitation.findUnique({
-    where: { tokenHash: hashInvitationToken(token) },
+    where: { tokenHash: await hashInvitationToken(token) },
     select: {
       email: true,
       role: true,

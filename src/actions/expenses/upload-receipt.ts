@@ -2,7 +2,7 @@
 
 import { fail, ok, toActionResult, type ActionResult } from "@/lib/actions/result";
 import { requireCapability } from "@/lib/auth/guards";
-import { uploadReceipt } from "@/lib/storage/blob";
+import { uploadReceipt } from "@/lib/storage";
 import { maxUploadBytes, UploadError } from "@/lib/storage/validate";
 
 /**

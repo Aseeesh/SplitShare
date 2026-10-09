@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma-node/client";
 import type { AuditAction } from "@/generated/prisma/enums";
 
 import { toAuditJson } from "./json";

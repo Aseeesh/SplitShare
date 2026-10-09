@@ -16,7 +16,7 @@ import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 
-import { PrismaClient } from "@/generated/prisma/client";
+import { PrismaClient } from "@/generated/prisma-node/client";
 import { computeSplits } from "@/lib/splits/engine";
 import { toDbCents } from "@/lib/money";
 
@@ -46,7 +46,7 @@ function createClient(): PrismaClient {
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set; nothing to seed");
   }
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
+  if (process.env.NODE_ENV === "production") {
     throw new Error("Refusing to seed a production database");
   }
   return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });

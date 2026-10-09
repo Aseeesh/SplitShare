@@ -1,0 +1,45 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "./custom-worker.ts",
+  "name": "splitshare",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "alias": {
+    "opennext-worker": "./.open-next/worker.js"
+  },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      // Self-reference service binding; the service name must match the worker
+      // name. Fallback path for the cron wrapper (see custom-worker.ts).
+      // https://opennext.js.org/cloudflare/caching
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "splitshare"
+    }
+  ],
+  "r2_buckets": [
+    {
+      // OpenNext incremental cache.
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "splitshare-opennext-cache"
+    },
+    {
+      // Receipt storage (§ src/lib/storage/index.ts). Private by default —
+      // only the worker binding can read it.
+      "binding": "RECEIPTS",
+      "bucket_name": "splitshare-receipts"
+    }
+  ],
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "vars": {
+    "DATABASE_DRIVER": "neon",
+    "DATABASE_POOL_MAX": "3",
+    "NEXT_PUBLIC_APP_URL": "https://split-share.sparkclean.co.nz",
+    "EMAIL_FROM": "SplitHome <no-reply@sparkclean.co.nz>"
+  }
+}

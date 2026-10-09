@@ -7,22 +7,35 @@
  * hash, which is also why no constant-time comparison is needed here: we never
  * compare secrets, we index on the digest.
  *
- * Pure apart from `randomBytes`, so expiry and status logic are unit-testable.
+ * Pure apart from Web Crypto, so expiry and status logic are unit-testable.
  */
-
-import { createHash, randomBytes } from "node:crypto";
 
 /** 256 bits of entropy, url-safe so it survives being pasted into a link. */
 const TOKEN_BYTES = 32;
 
+function toBase64Url(bytes: Uint8Array): string {
+  // btoa is global in Node >= 16 and in workerd; Buffer is neither, so the
+  // base64url encoding is spelled out instead of Buffer.from(...).toString().
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export const DEFAULT_INVITATION_TTL_DAYS = 7;
 
 export function generateInvitationToken(): string {
-  return randomBytes(TOKEN_BYTES).toString("base64url");
+  return toBase64Url(crypto.getRandomValues(new Uint8Array(TOKEN_BYTES)));
 }
 
-export function hashInvitationToken(token: string): string {
-  return createHash("sha256").update(token, "utf8").digest("hex");
+export async function hashInvitationToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return toHex(new Uint8Array(digest));
 }
 
 export function invitationExpiresAt(

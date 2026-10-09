@@ -6,11 +6,11 @@
 #
 # The database comes from .env (DATABASE_URL / DIRECT_URL), exactly like the
 # app reads it at runtime — there is no second source of connection strings.
+# Deployment goes to Cloudflare Workers (OpenNext + wrangler).
 
 # — defaults ------------------------------------------------------------------
 
-PNPM   ?= pnpm
-VERCEL ?= vercel
+PNPM ?= pnpm
 
 .DEFAULT_GOAL := help
 
@@ -18,7 +18,7 @@ VERCEL ?= vercel
         db-migrate db-status db-reset db-seed db-setup \
         run fresh dev build start \
         check lint typecheck test test-watch test-e2e coverage \
-        studio deploy deploy-preview format clean
+        studio deploy deploy-preview cf-typegen format clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -105,11 +105,14 @@ studio: env-check generate ## Prisma Studio GUI
 
 # — deploy ------------------------------------------------------------------------
 
-deploy: check ## Production deploy to Vercel (after all gates pass)
-	$(VERCEL) deploy --prod
+deploy: check ## Production deploy to Cloudflare Workers (after all gates pass)
+	$(PNPM) cf:deploy
 
-deploy-preview: ## Preview deploy to Vercel
-	$(VERCEL) deploy
+deploy-preview: ## Local Workers-runtime preview (workerd, needs .dev.vars)
+	$(PNPM) cf:preview
+
+cf-typegen: ## Regenerate worker-configuration.d.ts from wrangler.jsonc
+	$(PNPM) cf:typegen
 
 # — housekeeping -------------------------------------------------------------------
 

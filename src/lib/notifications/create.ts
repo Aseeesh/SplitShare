@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Prisma } from "@/generated/prisma/client";
+import type { Prisma } from "@/generated/prisma-node/client";
 import type { NotificationType } from "@/generated/prisma/enums";
 
 import { notificationCopy, type NotificationContext } from "./messages";

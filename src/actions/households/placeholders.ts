@@ -1,7 +1,5 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-
 import { revalidatePath } from "next/cache";
 
 import { fail, ok, toActionResult, type ActionResult } from "@/lib/actions/result";
@@ -51,7 +49,7 @@ export async function addPlaceholderMember(
       );
     }
 
-    const userId = randomUUID();
+    const userId = globalThis.crypto.randomUUID();
 
     await prisma.$transaction(async (tx) => {
       await tx.user.create({

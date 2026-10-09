@@ -26,21 +26,21 @@ describe("invitation tokens", () => {
     expect(tokens.size).toBe(200);
   });
 
-  it("hashes deterministically, which is what makes lookup by hash possible", () => {
+  it("hashes deterministically, which is what makes lookup by hash possible", async () => {
     const token = generateInvitationToken();
-    expect(hashInvitationToken(token)).toBe(hashInvitationToken(token));
-    expect(hashInvitationToken(token)).toMatch(/^[0-9a-f]{64}$/);
+    expect(await hashInvitationToken(token)).toBe(await hashInvitationToken(token));
+    expect(await hashInvitationToken(token)).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("never stores anything resembling the token itself", () => {
+  it("never stores anything resembling the token itself", async () => {
     const token = generateInvitationToken();
-    const hash = hashInvitationToken(token);
+    const hash = await hashInvitationToken(token);
     expect(hash).not.toContain(token);
     expect(hash).not.toBe(token);
   });
 
-  it("hashes different tokens differently", () => {
-    expect(hashInvitationToken("a")).not.toBe(hashInvitationToken("b"));
+  it("hashes different tokens differently", async () => {
+    expect(await hashInvitationToken("a")).not.toBe(await hashInvitationToken("b"));
   });
 });
 
