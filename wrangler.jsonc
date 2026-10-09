@@ -5,11 +5,11 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "alias": {
-    "opennext-worker": "./.open-next/worker.js"
+    "opennext-worker": "./.open-next/worker.js",
   },
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
   "services": [
     {
@@ -17,16 +17,16 @@
       // name. Fallback path for the cron wrapper (see custom-worker.ts).
       // https://opennext.js.org/cloudflare/caching
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "splitshare"
-    }
+      "service": "splitshare",
+    },
   ],
   "triggers": {
-    "crons": ["0 * * * *"]
+    "crons": ["0 * * * *"],
   },
   "vars": {
     "DATABASE_DRIVER": "neon",
     "DATABASE_POOL_MAX": "3",
     "NEXT_PUBLIC_APP_URL": "https://split-share.sparkclean.co.nz",
-    "EMAIL_FROM": "SplitHome <no-reply@sparkclean.co.nz>"
-  }
+    "EMAIL_FROM": "SplitHome <no-reply@sparkclean.co.nz>",
+  },
 }
