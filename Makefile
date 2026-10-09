@@ -56,6 +56,8 @@ db-seed: env-check generate ## Idempotent dev seed (the §12 Ann/Bob/Cal fixture
 db-reset: env-check generate ## DESTRUCTIVE: drop schema, replay migrations, reseed
 	@echo "!! Resetting the database at DATABASE_URL — the seed refuses production URLs"
 	$(PNPM) db:reset
+# Prisma 7: migrate reset no longer auto-runs the seed — do it explicitly.
+	$(PNPM) db:seed
 
 db-setup: db-migrate db-seed ## Fresh-but-safe DB: migrate + seed, nothing dropped
 
