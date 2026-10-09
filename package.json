@@ -22,7 +22,8 @@
     "db:reset": "prisma migrate reset --force --config ./prisma7.config.ts",
     "db:seed": "prisma db seed --config ./prisma7.config.ts",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "prisma generate --config ./prisma7.config.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
