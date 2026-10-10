@@ -26,8 +26,8 @@
   "vars": {
     "DATABASE_DRIVER": "neon",
     "DATABASE_POOL_MAX": "3",
-    "NEXT_PUBLIC_APP_URL": "https://splitshare.ashish-rijal.workers.dev",
-    "AUTH_URL": "https://splitshare.ashish-rijal.workers.dev",
+    "NEXT_PUBLIC_APP_URL": "https://split-share.ashishrijal.com.np",
+    "AUTH_URL": "https://split-share.ashishrijal.com.np",
     "EMAIL_FROM": "SplitHome <no-reply@sparkclean.co.nz>",
   },
 }
