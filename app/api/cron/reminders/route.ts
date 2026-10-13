@@ -1,4 +1,5 @@
 import { isCronAuthorised } from "@/lib/cron/auth";
+import { generateDueRecurringExpenses } from "@/lib/recurring/generate";
 import { runReminders } from "@/lib/reminders/run";
 
 /**
@@ -15,12 +16,19 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   try {
-    const result = await runReminders();
-    return Response.json({ ok: true, ...result });
+    const [result, recurringGenerated] = await Promise.all([
+      runReminders(),
+      generateDueRecurringExpenses(),
+    ]);
+    return Response.json({
+      ok: true,
+      ...result,
+      recurringExpensesGenerated: recurringGenerated,
+    });
   } catch (error) {
     // Never echo the error back: this endpoint is reachable by anyone who can
     // guess the URL, and a stack trace would describe the schema to them.
-    console.error("[cron] reminders failed", error);
-    return Response.json({ error: "Reminder run failed" }, { status: 500 });
+    console.error("[cron] run failed", error);
+    return Response.json({ error: "Cron run failed" }, { status: 500 });
   }
 }

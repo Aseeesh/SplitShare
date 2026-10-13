@@ -65,6 +65,13 @@ enum SplitMethod {
   SHARES
 }
 
+enum RecurrenceFrequency {
+  WEEKLY
+  FORTNIGHTLY
+  MONTHLY
+  YEARLY
+}
+
 /// §8 per-participant acceptance.
 enum AcceptanceStatus {
   PENDING
@@ -159,6 +166,8 @@ model User {
   householdsCreated  Household[]            @relation("HouseholdCreatedBy")
   expensesPaid       Expense[]              @relation("ExpensePaidBy")
   expensesCreated    Expense[]              @relation("ExpenseCreatedBy")
+  recurringExpensesCreated RecurringExpense[] @relation("RecurringExpenseCreatedBy")
+  recurringExpensesPaid    RecurringExpense[] @relation("RecurringExpensePaidBy")
   expensesLocked     Expense[]              @relation("ExpenseLockedBy")
   splits             ExpenseSplit[]
   paymentsSent       Payment[]              @relation("PaymentFrom")
@@ -243,6 +252,7 @@ model Household {
   categories  Category[]
   expenses    Expense[]
   payments    Payment[]
+  recurringExpenses RecurringExpense[]
   settlements Settlement[]
   auditLogs   AuditLog[]
   notifications Notification[]
@@ -306,6 +316,7 @@ model Category {
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   expenses  Expense[]
+  recurringExpenses RecurringExpense[]
 
   @@unique([householdId, name])
   @@map("categories")
@@ -351,6 +362,35 @@ model Expense {
   @@index([householdId, status])
   @@index([paidByUserId])
   @@map("expenses")
+}
+
+// ---------------------------------------------------------------------------
+// Recurring expenses — a template that regenerates an expense on a schedule.
+// ---------------------------------------------------------------------------
+
+model RecurringExpense {
+  id              String             @id @default(uuid(7)) @db.Uuid
+  householdId     String             @map("household_id") @db.Uuid
+  createdByUserId String             @map("created_by_user_id") @db.Uuid
+  description     String             @db.VarChar(200)
+  amountCents     BigInt             @map("amount_cents")
+  currency        String             @db.Char(3)
+  categoryId      String?            @map("category_id") @db.Uuid
+  paidByUserId    String             @map("paid_by_user_id") @db.Uuid
+  splitMethod     SplitMethod        @map("split_method")
+  frequency       RecurrenceFrequency
+  nextRunAt       DateTime           @map("next_run_at") @db.Date
+  active          Boolean            @default(true)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("RecurringExpenseCreatedBy", fields: [createdByUserId], references: [id])
+  paidBy    User      @relation("RecurringExpensePaidBy", fields: [paidByUserId], references: [id])
+  category  Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([householdId, nextRunAt])
+  @@map("recurring_expenses")
 }
 
 model ExpenseSplit {

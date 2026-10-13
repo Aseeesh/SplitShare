@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AwaitingActionList } from "@/components/expenses/awaiting-action";
 import { ExpenseList } from "@/components/expenses/expense-list";
+import { RecurringSection } from "@/components/expenses/recurring";
 import { SpendingCharts } from "@/components/expenses/spending-charts";
 import { AppHeader } from "@/components/layout/app-header";
 import { HouseholdNav } from "@/components/layout/household-nav";
@@ -14,6 +15,7 @@ import { requireAuth } from "@/lib/auth/guards";
 import { getMonthlySpending, getSpendingByCategory } from "@/lib/expenses/analytics";
 import { listAwaitingYourAction, listExpenses } from "@/lib/expenses/queries";
 import { getHousehold } from "@/lib/households/queries";
+import { listRecurringExpenses } from "@/lib/recurring/queries";
 
 export const metadata: Metadata = {
   title: "Household",
@@ -43,11 +45,12 @@ export default async function HouseholdPage({
     throw error;
   }
 
-  const [awaiting, expenses, byCategory, byMonth] = await Promise.all([
+  const [awaiting, expenses, byCategory, byMonth, recurring] = await Promise.all([
     listAwaitingYourAction(householdId),
     listExpenses(householdId, { limit: 20 }),
     getSpendingByCategory(householdId),
     getMonthlySpending(householdId),
+    listRecurringExpenses(householdId),
   ]);
 
   return (
@@ -84,6 +87,17 @@ export default async function HouseholdPage({
             />
           </Card>
         ) : null}
+
+        <RecurringSection
+          householdId={householdId}
+          currency={household.currency}
+          members={household.members.map((member) => ({
+            userId: member.userId,
+            name: member.name ?? member.email,
+          }))}
+          items={recurring}
+          canCreate={household.yourRole !== "VIEWER"}
+        />
 
         <ExpenseList householdId={householdId} expenses={expenses} />
       </main>
