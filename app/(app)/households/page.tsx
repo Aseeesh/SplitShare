@@ -5,6 +5,7 @@ import { listHouseholds } from "@/lib/households/queries";
 import { formatSignedMoney } from "@/lib/money";
 import { balanceToneClass, ROLE_TONES, STATUS_BADGE_BASE } from "@/lib/ui/status";
 import { StaggerItem } from "@/components/ui/motion";
+import { CreateHousehold } from "@/components/households/create-household";
 
 export const metadata: Metadata = {
   title: "Your households",
@@ -23,6 +24,10 @@ export default async function HouseholdsPage() {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 p-6">
       <h1 className="text-2xl font-semibold tracking-tight">Your households</h1>
+
+      <div className="mt-4">
+        <CreateHousehold />
+      </div>
 
       {households.length === 0 ? (
         <p className="mt-6 rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-400">
