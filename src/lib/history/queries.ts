@@ -32,12 +32,24 @@ export interface HistoryEntry {
 export async function listHouseholdHistory(
   householdId: string,
   limit = 50,
+  query?: string,
 ): Promise<HistoryEntry[]> {
   await requireHouseholdMember(householdId);
 
   const [expenses, payments] = await Promise.all([
     prisma.expense.findMany({
-      where: { householdId, reversesExpenseId: null },
+      where: {
+        householdId,
+        reversesExpenseId: null,
+        ...(query
+          ? {
+              OR: [
+                { description: { contains: query, mode: "insensitive" } },
+                { notes: { contains: query, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
       select: {
         id: true,
         description: true,
@@ -52,7 +64,12 @@ export async function listHouseholdHistory(
       take: limit,
     }),
     prisma.payment.findMany({
-      where: { householdId, reversesPaymentId: null, reversedBy: { is: null } },
+      where: {
+        householdId,
+        reversesPaymentId: null,
+        reversedBy: { is: null },
+        ...(query ? { note: { contains: query, mode: "insensitive" } } : {}),
+      },
       select: {
         id: true,
         amountCents: true,

@@ -18,8 +18,11 @@ export const metadata: Metadata = {
  */
 export default async function HistoryPage({
   params,
+  searchParams,
 }: PageProps<"/households/[householdId]/history">) {
   const { householdId } = await params;
+  const { q } = await searchParams;
+  const query = typeof q === "string" ? q : undefined;
 
   let household;
   try {
@@ -32,7 +35,7 @@ export default async function HistoryPage({
     throw error;
   }
 
-  const entries = await listHouseholdHistory(householdId);
+  const entries = await listHouseholdHistory(householdId, 50, query);
 
   return (
     <>
@@ -47,6 +50,28 @@ export default async function HistoryPage({
             Export CSV
           </a>
         </div>
+        <form
+          action={`/households/${householdId}/history`}
+          method="GET"
+          className="flex gap-2"
+        >
+          <input
+            type="search"
+            name="q"
+            defaultValue={query ?? ""}
+            placeholder="Search expenses and payments"
+            className="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+          />
+          {query ? (
+            <a
+              href={`/households/${householdId}/history`}
+              className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300"
+            >
+              Clear
+            </a>
+          ) : null}
+        </form>
+
         <HistoryTimeline householdId={householdId} entries={entries} />
       </main>
       <HouseholdNav householdId={householdId} />
