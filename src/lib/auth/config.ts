@@ -17,6 +17,13 @@ export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "database" },
   pages: { signIn: "/signin" },
+  // Vercel serves HTTPS but Auth.js sometimes mis-detects the request protocol
+  // (server action vs route handler), which desyncs the `__Secure-` cookie names
+  // between the sign-in and callback requests and breaks PKCE with
+  // "pkceCodeVerifier value could not be parsed". Force secure cookies in
+  // production so both requests agree on the cookie names.
+  useSecureCookies: process.env.NODE_ENV === "production",
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
