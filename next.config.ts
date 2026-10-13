@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
     "@prisma/adapter-neon",
     "pg",
     "pg-cloudflare",
+    "nodemailer",
   ],
 
   async headers() {

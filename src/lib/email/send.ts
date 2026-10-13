@@ -1,5 +1,7 @@
 import "server-only";
 
+import nodemailer from "nodemailer";
+
 import type { EmailBody } from "./templates";
 import {
   expenseCreatedEmail,
@@ -76,17 +78,56 @@ class ResendEmailProvider implements EmailProvider {
   }
 }
 
+/**
+ * Gmail SMTP via an app password. Used when GMAIL_USER + GMAIL_APP_PASSWORD are
+ * set, so a household app can send real invite/expense/payment emails from the
+ * owner's own Gmail without a separate email service.
+ */
+class GmailSmtpEmailProvider implements EmailProvider {
+  private readonly transporter: ReturnType<typeof nodemailer.createTransport>;
+  private readonly from: string;
+
+  constructor(user: string, appPassword: string, from: string) {
+    this.transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: { user, pass: appPassword },
+    });
+    // Gmail only allows sending from the authenticated address (or its alias).
+    this.from = from;
+  }
+
+  async send(to: EmailRecipient, body: EmailBody): Promise<void> {
+    await this.transporter.sendMail({
+      from: this.from,
+      to: to.name ? `"${to.name}" <${to.email}>` : to.email,
+      subject: body.subject,
+      text: body.text,
+      html: body.html,
+    });
+  }
+}
+
 let cachedProvider: EmailProvider | undefined;
 
 export function emailProvider(): EmailProvider {
   if (cachedProvider) {
     return cachedProvider;
   }
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailAppPassword = process.env.GMAIL_APP_PASSWORD;
   const apiKey = process.env.EMAIL_API_KEY;
-  const from = process.env.EMAIL_FROM ?? "SplitHome <no-reply@example.com>";
-  cachedProvider = apiKey
-    ? new ResendEmailProvider(apiKey, from)
-    : new LoggingEmailProvider();
+  const from =
+    process.env.EMAIL_FROM ?? `SplitHome <${gmailUser ?? "no-reply@example.com"}>`;
+
+  if (gmailUser && gmailAppPassword) {
+    cachedProvider = new GmailSmtpEmailProvider(gmailUser, gmailAppPassword, from);
+  } else if (apiKey) {
+    cachedProvider = new ResendEmailProvider(apiKey, from);
+  } else {
+    cachedProvider = new LoggingEmailProvider();
+  }
   return cachedProvider;
 }
 
