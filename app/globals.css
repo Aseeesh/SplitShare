@@ -8,8 +8,14 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-outfit);
   --font-mono: var(--font-geist-mono);
+
+  /* Kinmel-inspired brand palette. */
+  --color-brand: #059669; /* emerald — primary actions & active nav */
+  --color-brand-strong: #048059; /* darker emerald for hover/press */
+  --color-navy: #27367a; /* deep navy — sidebar & brand surfaces */
+  --color-accent: #ee2e37; /* coral — highlights & destructive accents */
 }
 
 @media (prefers-color-scheme: dark) {
