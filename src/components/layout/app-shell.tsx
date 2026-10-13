@@ -24,12 +24,11 @@ function isActive(href: string, pathname: string, exact = false): boolean {
 }
 
 /**
- * The authenticated app chrome.
- *
- * Desktop (lg+) shows a persistent left sidebar; mobile shows a slim top bar
- * whose hamburger opens the same menu as a slide-out drawer. The bottom tab bar
- * (rendered by the household pages) is mobile-only, so the two never compete on
- * the same screen width.
+ * The app chrome: a top bar on desktop (logo + inline nav + account), and on
+ * mobile a slim bar whose hamburger opens a slide-out drawer. The household
+ * bottom tab bar is mobile-only, so desktop uses the top menu and mobile uses
+ * the bottom menu. Signed-out visitors get the landing page with no chrome, so
+ * nothing here throws for them.
  */
 export function AppShell({
   user,
@@ -43,7 +42,6 @@ export function AppShell({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Lock scroll while the mobile drawer is open.
   useEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = open ? "hidden" : previous;
@@ -52,106 +50,97 @@ export function AppShell({
     };
   }, [open]);
 
-  const sidebar = (
-    <>
-      <div className="flex items-center gap-2 px-4 py-3">
-        <span
-          aria-hidden="true"
-          className="bg-brand flex size-7 items-center justify-center rounded-lg text-sm font-bold text-white"
-        >
-          S
-        </span>
-        <span className="text-sm font-semibold tracking-tight text-white">SplitHome</span>
-        <button
-          type="button"
+  // Signed out: render the landing page with no navigation chrome.
+  if (!user) {
+    return <div className="flex min-h-dvh flex-col">{children}</div>;
+  }
+
+  const drawerNav = NAV.map(({ href, label, icon: Icon, exact }) => {
+    const active = isActive(href, pathname, exact);
+    return (
+      <li key={href}>
+        <Link
+          href={href}
+          aria-current={active ? "page" : undefined}
           onClick={() => setOpen(false)}
-          aria-label="Close menu"
-          className="ml-auto flex size-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-white/10 hover:text-white lg:hidden"
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+            active
+              ? "bg-brand/10 text-brand-strong"
+              : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          }`}
         >
-          <X className="size-5" aria-hidden="true" />
-        </button>
-      </div>
-
-      {user && (
-        <div className="border-b border-white/10 px-4 pb-4">
-          {user.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.image}
-              alt=""
-              className="size-10 rounded-full ring-1 ring-white/20"
-            />
-          ) : (
-            <div className="flex size-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
-              {(user.name ?? user.email ?? "?").charAt(0).toUpperCase()}
-            </div>
-          )}
-          <p className="mt-2 truncate text-sm font-medium text-white">
-            {user.name ?? "Signed in"}
-          </p>
-          {user.email && <p className="truncate text-xs text-slate-300">{user.email}</p>}
-        </div>
-      )}
-
-      <nav className="flex-1 px-2 py-2" aria-label="App">
-        <ul className="space-y-1">
-          {NAV.map(({ href, label, icon: Icon, exact }) => {
-            const active = isActive(href, pathname, exact);
-            return (
-              <li key={href}>
-                <Link
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  onClick={() => setOpen(false)}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-white/15 text-white"
-                      : "text-slate-300 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <Icon className="size-5" aria-hidden="true" />
-                  {label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      <div className="border-t border-white/10 p-4" onClick={() => setOpen(false)}>
-        <div className="[&_button]:text-slate-300 [&_button]:hover:text-white">
-          <SignOutButton action={signOutAction} />
-        </div>
-      </div>
-    </>
-  );
+          <Icon className="size-5" aria-hidden="true" />
+          {label}
+        </Link>
+      </li>
+    );
+  });
 
   return (
     <div className="flex min-h-dvh flex-col">
-      {/* Mobile top bar */}
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur lg:hidden dark:border-slate-800 dark:bg-slate-950/90">
-        <div className="mx-auto flex w-full max-w-2xl items-center gap-2 px-4 py-2.5">
+      {/* Top bar — desktop shows the full menu; mobile shows the hamburger. */}
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-1 px-4 py-2.5">
           <button
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Open menu"
-            className="-ml-1 flex size-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 active:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800 dark:active:bg-slate-700"
+            className="-ml-1 flex size-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 active:bg-slate-200 lg:hidden dark:text-slate-300 dark:hover:bg-slate-800 dark:active:bg-slate-700"
           >
             <Menu className="size-5" aria-hidden="true" />
           </button>
-          <Link
-            href="/"
-            className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100"
-          >
-            SplitHome
+
+          <Link href="/" className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="bg-brand flex size-7 items-center justify-center rounded-lg text-sm font-bold text-white"
+            >
+              S
+            </span>
+            <span className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+              SplitHome
+            </span>
           </Link>
+
+          <nav className="ml-4 hidden items-center gap-1 lg:flex" aria-label="App">
+            {NAV.map(({ href, label, exact }) => {
+              const active = isActive(href, pathname, exact);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-brand/10 text-brand-strong"
+                      : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="ml-auto hidden items-center gap-3 lg:flex">
+            {user.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.image}
+                alt=""
+                className="size-8 rounded-full ring-1 ring-slate-200 dark:ring-slate-700"
+              />
+            ) : (
+              <span className="bg-brand/15 text-brand-strong flex size-8 items-center justify-center rounded-full text-sm font-semibold">
+                {(user.name ?? user.email ?? "?").charAt(0).toUpperCase()}
+              </span>
+            )}
+            <div className="[&_button]:text-sm [&_button]:text-slate-600 dark:[&_button]:text-slate-300">
+              <SignOutButton action={signOutAction} />
+            </div>
+          </div>
         </div>
       </header>
-
-      {/* Persistent desktop sidebar */}
-      <aside className="bg-navy fixed inset-y-0 left-0 z-30 hidden w-64 flex-col lg:flex">
-        {sidebar}
-      </aside>
 
       {/* Mobile drawer */}
       <AnimatePresence>
@@ -165,7 +154,7 @@ export function AppShell({
               transition={{ duration: 0.2 }}
               onClick={() => setOpen(false)}
               aria-hidden="true"
-              className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm lg:hidden dark:bg-black/50"
+              className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm dark:bg-black/50"
             />
             <motion.aside
               key="drawer"
@@ -173,16 +162,45 @@ export function AppShell({
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 320 }}
-              className="bg-navy fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
             >
-              {sidebar}
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-sm font-semibold tracking-tight">Menu</span>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close menu"
+                  className="flex size-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                >
+                  <X className="size-5" aria-hidden="true" />
+                </button>
+              </div>
+
+              <div className="border-b border-slate-200 px-4 pb-4 dark:border-slate-800">
+                <p className="truncate text-sm font-medium">{user.name ?? "Signed in"}</p>
+                {user.email && (
+                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    {user.email}
+                  </p>
+                )}
+              </div>
+
+              <nav className="flex-1 px-2 py-2" aria-label="App">
+                <ul className="space-y-1">{drawerNav}</ul>
+              </nav>
+
+              <div
+                className="border-t border-slate-200 p-4 dark:border-slate-800"
+                onClick={() => setOpen(false)}
+              >
+                <SignOutButton action={signOutAction} />
+              </div>
             </motion.aside>
           </>
         )}
       </AnimatePresence>
 
-      {/* Content is pushed right of the sidebar on desktop. */}
-      <div className="flex flex-1 flex-col lg:pl-64">{children}</div>
+      <div className="flex flex-1 flex-col">{children}</div>
     </div>
   );
 }
