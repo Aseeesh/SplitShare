@@ -7,6 +7,8 @@ import { SpendingCharts } from "@/components/expenses/spending-charts";
 import { AppHeader } from "@/components/layout/app-header";
 import { HouseholdNav } from "@/components/layout/household-nav";
 import { BalanceSummary, SettleUpPlan } from "@/components/dashboard/balance-summary";
+import { DefaultSplitSetting } from "@/components/households/default-split-setting";
+import { Card, CardHeader } from "@/components/ui/card";
 import { NotAMemberError } from "@/lib/auth/errors";
 import { requireAuth } from "@/lib/auth/guards";
 import { getMonthlySpending, getSpendingByCategory } from "@/lib/expenses/analytics";
@@ -71,6 +73,17 @@ export default async function HouseholdPage({
           byMonth={byMonth}
           currency={household.currency}
         />
+
+        {household.yourRole === "ADMIN" ? (
+          <Card>
+            <CardHeader title="Settings" />
+            <DefaultSplitSetting
+              householdId={householdId}
+              current={household.defaultSplitMethod}
+              canManage
+            />
+          </Card>
+        ) : null}
 
         <ExpenseList householdId={householdId} expenses={expenses} />
       </main>

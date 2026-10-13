@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import type { HouseholdRole } from "@/generated/prisma/enums";
+import type { HouseholdRole, SplitMethod } from "@/generated/prisma/enums";
 import { requireAuth, requireHouseholdMember } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/client";
 import { fromDbCents } from "@/lib/money";
@@ -138,6 +138,7 @@ export interface HouseholdDetail {
   name: string;
   currency: string;
   reminderOffsetDays: number[];
+  defaultSplitMethod: SplitMethod;
   yourRole: HouseholdRole;
   members: MemberBalance[];
 }
@@ -148,7 +149,13 @@ export async function getHousehold(householdId: string): Promise<HouseholdDetail
   const [household, members] = await Promise.all([
     prisma.household.findUniqueOrThrow({
       where: { id: householdId },
-      select: { id: true, name: true, currency: true, reminderOffsetDays: true },
+      select: {
+        id: true,
+        name: true,
+        currency: true,
+        reminderOffsetDays: true,
+        defaultSplitMethod: true,
+      },
     }),
     getMemberBalances(householdId),
   ]);

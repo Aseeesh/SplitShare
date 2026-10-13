@@ -232,6 +232,8 @@ model Household {
   createdByUserId String   @map("created_by_user_id") @db.Uuid
   /// §18 — days after the expense date on which reminders are due.
   reminderOffsetDays Int[] @default([3, 7]) @map("reminder_offset_days")
+  /// The split method pre-selected when creating a new expense in this group.
+  defaultSplitMethod SplitMethod @default(EQUAL) @map("default_split_method")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

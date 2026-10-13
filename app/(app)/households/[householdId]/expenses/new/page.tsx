@@ -46,6 +46,7 @@ export default async function NewExpensePage({
           householdId={householdId}
           currency={household.currency}
           viewerUserId={viewer.id}
+          defaultMethod={household.defaultSplitMethod}
           categories={categories}
           members={household.members.map((member) => ({
             userId: member.userId,

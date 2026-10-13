@@ -43,12 +43,14 @@ export function ExpenseForm({
   members,
   categories,
   viewerUserId,
+  defaultMethod = "EQUAL",
 }: {
   householdId: string;
   currency: string;
   members: FormMember[];
   categories: FormCategory[];
   viewerUserId: string;
+  defaultMethod?: SplitMethod;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -58,7 +60,7 @@ export function ExpenseForm({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [categoryId, setCategoryId] = useState<string>("");
   const [paidByUserId, setPaidByUserId] = useState(viewerUserId);
-  const [method, setMethod] = useState<SplitMethod>("EQUAL");
+  const [method, setMethod] = useState<SplitMethod>(defaultMethod);
   const [selected, setSelected] = useState<string[]>(() => members.map((m) => m.userId));
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [receipt, setReceipt] = useState<File | null>(null);

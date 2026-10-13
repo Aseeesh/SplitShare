@@ -47,6 +47,11 @@ export const changeRoleSchema = z.object({
   role: roleSchema,
 });
 
+export const updateDefaultSplitMethodSchema = z.object({
+  householdId: z.uuid(),
+  method: z.enum(["EQUAL", "EXACT", "PERCENTAGE", "SHARES"]),
+});
+
 export type CreateHouseholdInput = z.infer<typeof createHouseholdSchema>;
 export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 
