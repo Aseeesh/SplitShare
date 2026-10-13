@@ -20,8 +20,8 @@ export async function POST(req: Request) {
   const form = await req.formData();
   const callbackUrl = (form.get("callbackUrl") as string | null) ?? "/";
 
-  const base = process.env.AUTH_URL ?? new URL(req.url).origin;
-  const signinUrl = `${base.replace(/\/$/, "")}/api/auth/signin/google`;
+  const base = new URL(req.url).origin;
+  const signinUrl = `${base}/api/auth/signin/google`;
 
   const signinReq = new Request(signinUrl, {
     method: "POST",
@@ -32,7 +32,6 @@ export async function POST(req: Request) {
   return Auth(signinReq, {
     ...authConfig,
     basePath: "/api/auth",
-    secret: process.env.AUTH_SECRET,
     skipCSRFCheck,
   });
 }

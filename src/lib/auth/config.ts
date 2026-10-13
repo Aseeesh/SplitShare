@@ -24,6 +24,7 @@ export const authConfig: NextAuthConfig = {
   // production so both requests agree on the cookie names.
   useSecureCookies: process.env.NODE_ENV === "production",
   trustHost: true,
+  secret: process.env.AUTH_SECRET,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
