@@ -9,8 +9,8 @@ name: Verify & deploy to Cloudflare
 # exist before typecheck and build.
 
 on:
-  push:
-    branches: [main]
+  # Cloudflare auto-deploy is DISABLED (2026-10-13) — Vercel is the active target.
+  # To resume Cloudflare deploys on every push, re-add `push: { branches: [main] }`.
   workflow_dispatch:
 
 jobs:
