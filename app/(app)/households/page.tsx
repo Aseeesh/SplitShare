@@ -20,6 +20,14 @@ export const metadata: Metadata = {
  */
 export default async function HouseholdsPage() {
   const households = await listHouseholds();
+  const totalCents = households.reduce(
+    (sum, household) => sum + household.yourNetCents,
+    0,
+  );
+  const singleCurrency =
+    new Set(households.map((household) => household.currency)).size === 1
+      ? (households[0]?.currency ?? null)
+      : null;
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 p-6">
@@ -28,6 +36,22 @@ export default async function HouseholdsPage() {
       <div className="mt-4">
         <CreateHousehold />
       </div>
+
+      {households.length > 0 && singleCurrency ? (
+        <div className="mt-6 flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div>
+            <p className="text-sm font-medium">Across all groups</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Combined net position
+            </p>
+          </div>
+          <p
+            className={`font-mono text-lg font-semibold ${balanceToneClass(totalCents)}`}
+          >
+            {formatSignedMoney(totalCents, singleCurrency)}
+          </p>
+        </div>
+      ) : null}
 
       {households.length === 0 ? (
         <p className="mt-6 rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-400">
