@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
  */
 const TABS = [
   { segment: "", label: "Home" },
+  { segment: "/history", label: "History" },
   { segment: "/payments", label: "Payments" },
   { segment: "/members", label: "Members" },
 ];

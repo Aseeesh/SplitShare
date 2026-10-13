@@ -4,6 +4,7 @@ import Link from "next/link";
 import { listHouseholds } from "@/lib/households/queries";
 import { formatSignedMoney } from "@/lib/money";
 import { balanceToneClass, ROLE_TONES, STATUS_BADGE_BASE } from "@/lib/ui/status";
+import { StaggerItem } from "@/components/ui/motion";
 
 export const metadata: Metadata = {
   title: "Your households",
@@ -29,11 +30,11 @@ export default async function HouseholdsPage() {
           link in their email will bring you back here.
         </p>
       ) : (
-        <ul className="mt-6 space-y-3">
-          {households.map((household) => {
+        <div className="mt-6 space-y-3">
+          {households.map((household, i) => {
             const tone = ROLE_TONES[household.role];
             return (
-              <li key={household.id}>
+              <StaggerItem key={household.id} index={i}>
                 <Link
                   href={`/households/${household.id}`}
                   className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/50"
@@ -63,10 +64,10 @@ export default async function HouseholdsPage() {
                     </p>
                   </div>
                 </Link>
-              </li>
+              </StaggerItem>
             );
           })}
-        </ul>
+        </div>
       )}
     </main>
   );
