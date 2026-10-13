@@ -30,6 +30,7 @@
     "cf:typegen": "wrangler types --include-runtime=false && printf '/// <reference types=\"@cloudflare/workers-types\" />\\n' | cat - worker-configuration.d.ts > .tmp-types && mv .tmp-types worker-configuration.d.ts"
   },
   "dependencies": {
+    "@auth/core": "0.41.3",
     "@auth/prisma-adapter": "^2.11.3",
     "@hookform/resolvers": "^5.9.1",
     "@opennextjs/cloudflare": "^1.20.9",

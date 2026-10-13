@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { signIn } from "@/lib/auth";
 import { getOptionalUser } from "@/lib/auth/guards";
 
 export const metadata: Metadata = {
@@ -61,14 +60,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
             </p>
           ) : null}
 
-          <form
-            className="mt-6"
-            action={async () => {
-              "use server";
-              // Throws a redirect on success, so nothing may catch it here.
-              await signIn("google", { redirectTo });
-            }}
-          >
+          <form className="mt-6" method="POST" action="/api/oauth/google">
+            <input type="hidden" name="callbackUrl" value={redirectTo} />
             <button
               type="submit"
               className="flex w-full items-center justify-center gap-3 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
