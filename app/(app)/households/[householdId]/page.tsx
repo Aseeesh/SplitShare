@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 
 import { AwaitingActionList } from "@/components/expenses/awaiting-action";
 import { ExpenseList } from "@/components/expenses/expense-list";
+import { SpendingCharts } from "@/components/expenses/spending-charts";
 import { AppHeader } from "@/components/layout/app-header";
 import { HouseholdNav } from "@/components/layout/household-nav";
 import { BalanceSummary, SettleUpPlan } from "@/components/dashboard/balance-summary";
 import { NotAMemberError } from "@/lib/auth/errors";
 import { requireAuth } from "@/lib/auth/guards";
+import { getMonthlySpending, getSpendingByCategory } from "@/lib/expenses/analytics";
 import { listAwaitingYourAction, listExpenses } from "@/lib/expenses/queries";
 import { getHousehold } from "@/lib/households/queries";
 
@@ -39,9 +41,11 @@ export default async function HouseholdPage({
     throw error;
   }
 
-  const [awaiting, expenses] = await Promise.all([
+  const [awaiting, expenses, byCategory, byMonth] = await Promise.all([
     listAwaitingYourAction(householdId),
     listExpenses(householdId, { limit: 20 }),
+    getSpendingByCategory(householdId),
+    getMonthlySpending(householdId),
   ]);
 
   return (
@@ -60,6 +64,12 @@ export default async function HouseholdPage({
           members={household.members}
           currency={household.currency}
           viewerUserId={viewer.id}
+        />
+
+        <SpendingCharts
+          byCategory={byCategory}
+          byMonth={byMonth}
+          currency={household.currency}
         />
 
         <ExpenseList householdId={householdId} expenses={expenses} />

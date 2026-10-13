@@ -38,7 +38,15 @@ export default async function HistoryPage({
     <>
       <AppHeader householdName={household.name} role={household.yourRole} />
       <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 p-4 pb-24">
-        <h1 className="text-xl font-semibold tracking-tight">History</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold tracking-tight">History</h1>
+          <a
+            href={`/api/households/${householdId}/export`}
+            className="text-brand-strong hover:text-brand text-sm font-medium underline underline-offset-4"
+          >
+            Export CSV
+          </a>
+        </div>
         <HistoryTimeline householdId={householdId} entries={entries} />
       </main>
       <HouseholdNav householdId={householdId} />
