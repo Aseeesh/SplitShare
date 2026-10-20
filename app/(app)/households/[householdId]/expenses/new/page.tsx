@@ -57,7 +57,19 @@ export default async function NewExpensePage({
     } catch {
       notFound();
     }
-    const exact = original.splitMethod !== "EQUAL";
+    // Keep the original method, so a percentage or shares split stays one.
+    const weightOf = (split: (typeof original.splits)[number]): string => {
+      switch (original.splitMethod) {
+        case "EXACT":
+          return toMoneyInput(split.amountCents, original.currency);
+        case "PERCENTAGE":
+          return split.percentBps === null ? "" : toMoneyInput(split.percentBps, "XXX");
+        case "SHARES":
+          return split.shares === null ? "" : String(split.shares);
+        default:
+          return "";
+      }
+    };
     seed = {
       expenseId: original.id,
       description: original.description,
@@ -65,16 +77,11 @@ export default async function NewExpensePage({
       date: original.date.toISOString().slice(0, 10),
       categoryId: original.categoryId ?? "",
       paidByUserId: original.paidByUserId,
-      method: exact ? "EXACT" : "EQUAL",
+      method: original.splitMethod,
       selected: original.splits.map((split) => split.userId),
-      weights: exact
-        ? Object.fromEntries(
-            original.splits.map((split) => [
-              split.userId,
-              toMoneyInput(split.amountCents, original.currency),
-            ]),
-          )
-        : {},
+      weights: Object.fromEntries(
+        original.splits.map((split) => [split.userId, weightOf(split)]),
+      ),
     };
   }
 

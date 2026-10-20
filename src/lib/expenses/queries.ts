@@ -188,6 +188,8 @@ export interface ExpenseDetail extends ExpenseListItem {
     acceptance: AcceptanceStatus;
     settled: boolean;
     isPlaceholder: boolean;
+    percentBps: number | null;
+    shares: number | null;
   }>;
 }
 
@@ -223,6 +225,8 @@ export async function getExpense(
           amountCents: true,
           acceptance: true,
           settledAt: true,
+          percentBps: true,
+          shares: true,
           user: { select: { name: true, email: true, isPlaceholder: true } },
         },
         orderBy: { amountCents: "desc" },
@@ -269,6 +273,8 @@ export async function getExpense(
       amountCents: fromDbCents(split.amountCents, "split amount"),
       acceptance: split.acceptance,
       settled: split.settledAt !== null,
+      percentBps: split.percentBps,
+      shares: split.shares,
       isPlaceholder: split.user.isPlaceholder,
     })),
   };

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { createExpense } from "@/actions/expenses/create";
-import { reverseExpense } from "@/actions/expenses/reverse";
+import { correctExpense } from "@/actions/expenses/correct";
 import { uploadReceiptAction } from "@/actions/expenses/upload-receipt";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -214,7 +214,7 @@ export function ExpenseForm({
         ];
       }
 
-      const result = await createExpense({
+      const payload = {
         householdId,
         paidByUserId,
         categoryId: categoryId === "" ? null : categoryId,
@@ -226,7 +226,10 @@ export function ExpenseForm({
         participants,
         receiptFileId,
         funders,
-      });
+      };
+      const result = correcting
+        ? await correctExpense({ ...payload, correctsExpenseId: correcting.expenseId })
+        : await createExpense(payload);
 
       if (!result.ok) {
         setError(result.message);
@@ -234,22 +237,6 @@ export function ExpenseForm({
         return;
       }
 
-      // A correction is a new expense plus a reversal of the old one. The new
-      // one is saved first, so a failure here can only ever leave a duplicate
-      // (visible, and removable) rather than losing the record.
-      if (correcting) {
-        const reversal = await reverseExpense({
-          householdId,
-          expenseId: correcting.expenseId,
-          reason: "Corrected",
-        });
-        if (!reversal.ok) {
-          setError(
-            `The corrected expense was saved, but the original could not be replaced: ${reversal.message}`,
-          );
-          return;
-        }
-      }
       router.push(`/households/${householdId}`);
       router.refresh();
     });
