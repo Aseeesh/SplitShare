@@ -66,10 +66,26 @@ jobs:
         id: deploy
         run: scripts/deploy/deploy.sh "$DEPLOY_TARGET"
 
+      # The hook always builds the NEWEST commit on main. If something newer has
+      # landed since this run started, this commit will never be the one serving
+      # and waiting for it would block the queue; that newer run verifies instead.
+      - name: Is this still the newest commit?
+        id: newest
+        run: |
+          head="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$head" = "$GITHUB_SHA" ]; then
+            echo "newest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "newest=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Superseded by ${head:0:7}; its own run will verify the release."
+          fi
+
       # A hook returns before the build is done, so wait for the new commit to
       # be the one serving before testing anything.
       - name: Wait for this commit to go live
-        run: python scripts/ops/cli.py wait "${{ steps.deploy.outputs.url }}" "$GITHUB_SHA"
+        if: steps.newest.outputs.newest == 'true'
+        run: python scripts/ops/cli.py wait "${{ steps.deploy.outputs.url }}" "$GITHUB_SHA" --timeout 600
 
       - name: Smoke test
+        if: steps.newest.outputs.newest == 'true'
         run: python scripts/ops/cli.py smoke "${{ steps.deploy.outputs.url }}"
