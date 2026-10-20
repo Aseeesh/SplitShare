@@ -138,6 +138,12 @@ describeDb("§10 deferred split-sum assertion", () => {
           )
           RETURNING id
         `;
+        // Every expense must carry funders that sum to its total (§10 amendment).
+        await tx.$executeRaw`
+      INSERT INTO "expense_funders" (id, expense_id, user_id, amount_cents)
+      SELECT gen_random_uuid(), id, paid_by_user_id, amount_cents
+        FROM "expenses" WHERE id = ${id}::uuid
+    `;
         for (const userId of [userIds.Ann, userIds.Bob]) {
           await tx.$executeRaw`
             INSERT INTO "expense_splits" (id, expense_id, user_id, amount_cents, created_at)
@@ -170,7 +176,10 @@ describeDb("§10 deferred split-sum assertion", () => {
       prisma.$executeRaw`
         UPDATE "expenses" SET amount_cents = 9500 WHERE id = ${expenseId}::uuid
       `,
-    ).rejects.toThrow(/splits summing to 9000 but a total of 9500/);
+      // Both the split-sum and the funder-sum invariants are now broken, and
+      // whichever constraint trigger fires first reports it. The point is that it
+      // fires at all, rather than failing with a missing-column error.
+    ).rejects.toThrow(/(splits|funders) summing to 9000 but a total of 9500/);
   });
 
   it("rejects at COMMIT when the splits do not sum to the expense total", async () => {
@@ -191,6 +200,12 @@ describeDb("§10 deferred split-sum assertion", () => {
           )
           RETURNING id
         `;
+        // Every expense must carry funders that sum to its total (§10 amendment).
+        await tx.$executeRaw`
+      INSERT INTO "expense_funders" (id, expense_id, user_id, amount_cents)
+      SELECT gen_random_uuid(), id, paid_by_user_id, amount_cents
+        FROM "expenses" WHERE id = ${id}::uuid
+    `;
         // 4500 + 4000 = 8500, not 9000.
         await tx.$executeRaw`
           INSERT INTO "expense_splits" (id, expense_id, user_id, amount_cents, created_at)
@@ -305,6 +320,12 @@ describeDb("§12 household_balances", () => {
         )
         RETURNING id
       `;
+      // Every expense must carry funders that sum to its total (§10 amendment).
+      await tx.$executeRaw`
+      INSERT INTO "expense_funders" (id, expense_id, user_id, amount_cents)
+      SELECT gen_random_uuid(), id, paid_by_user_id, amount_cents
+        FROM "expenses" WHERE id = ${id}::uuid
+    `;
       for (const userId of [userIds.Ann, userIds.Bob]) {
         await tx.$executeRaw`
           INSERT INTO "expense_splits" (id, expense_id, user_id, amount_cents, created_at)
@@ -542,6 +563,12 @@ describeDb("§7 reversal and §12 balances", () => {
         )
         RETURNING id
       `;
+      // Every expense must carry funders that sum to its total (§10 amendment).
+      await tx.$executeRaw`
+      INSERT INTO "expense_funders" (id, expense_id, user_id, amount_cents)
+      SELECT gen_random_uuid(), id, paid_by_user_id, amount_cents
+        FROM "expenses" WHERE id = ${reversalId}::uuid
+    `;
       for (const split of splits) {
         await tx.$executeRaw`
           INSERT INTO "expense_splits" (
@@ -615,6 +642,12 @@ describeDb("§7 reversal and §12 balances", () => {
         )
         RETURNING id
       `;
+      // Every expense must carry funders that sum to its total (§10 amendment).
+      await tx.$executeRaw`
+      INSERT INTO "expense_funders" (id, expense_id, user_id, amount_cents)
+      SELECT gen_random_uuid(), id, paid_by_user_id, amount_cents
+        FROM "expenses" WHERE id = ${id}::uuid
+    `;
       for (const userId of [userIds.Ann, userIds.Bob]) {
         await tx.$executeRaw`
           INSERT INTO "expense_splits" (id, expense_id, user_id, amount_cents, created_at)

@@ -173,6 +173,12 @@ export async function seedAcceptedExpense(
       )
       RETURNING id
     `;
+    // Every expense must carry funders that sum to its total (§10 amendment).
+    await tx.$executeRaw`
+      INSERT INTO "expense_funders" (id, expense_id, user_id, amount_cents)
+      SELECT gen_random_uuid(), id, paid_by_user_id, amount_cents
+        FROM "expenses" WHERE id = ${expenseId}::uuid
+    `;
 
     for (const split of options.splits) {
       await tx.$executeRaw`

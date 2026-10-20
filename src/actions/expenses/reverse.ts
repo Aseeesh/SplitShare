@@ -45,6 +45,7 @@ export async function reverseExpense(
         paidByUserId: true,
         splitMethod: true,
         reversedBy: { select: { id: true } },
+        funders: { select: { userId: true, amountCents: true } },
         splits: {
           select: { userId: true, amountCents: true, percentBps: true, shares: true },
         },
@@ -84,6 +85,14 @@ export async function reverseExpense(
           // A reversal is not up for debate: it cancels something already
           // agreed, so it lands ACCEPTED and takes effect at once.
           status: "ACCEPTED",
+          // The funder-sum invariant applies to every expense row, reversals
+          // included: negating each contribution keeps it balanced.
+          funders: {
+            create: expense.funders.map((funder) => ({
+              userId: funder.userId,
+              amountCents: -funder.amountCents,
+            })),
+          },
           splits: {
             create: expense.splits.map((split) => ({
               userId: split.userId,
