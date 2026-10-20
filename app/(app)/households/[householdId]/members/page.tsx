@@ -5,12 +5,15 @@ import { AppHeader } from "@/components/layout/app-header";
 import { HouseholdNav } from "@/components/layout/household-nav";
 import { AddMember } from "@/components/members/add-member";
 import { MemberRow } from "@/components/members/member-row";
+import { HouseholdDangerZone } from "@/components/members/household-danger-zone";
+import { SuggestedPeople } from "@/components/members/suggested-people";
 import { PendingInvitations } from "@/components/members/pending-invitations";
 import { Card } from "@/components/ui/card";
 import { NotAMemberError } from "@/lib/auth/errors";
 import { requireAuth } from "@/lib/auth/guards";
 import { can } from "@/lib/auth/permissions";
 import { getHousehold, listPendingInvitations } from "@/lib/households/queries";
+import { listSuggestedPeople } from "@/lib/overview/queries";
 import { isPlaceholderEmail } from "@/lib/households/placeholders";
 
 export const metadata: Metadata = { title: "Members" };
@@ -34,7 +37,12 @@ export default async function MembersPage({
   const canManage = household.viaSuperUser || can(household.yourRole, "MANAGE_MEMBERS");
   // §5 — pending invitations are admin-only data, so they are not even fetched
   // for anyone else.
-  const invitations = canManage ? await listPendingInvitations(householdId) : [];
+  const [invitations, suggestions] = canManage
+    ? await Promise.all([
+        listPendingInvitations(householdId),
+        listSuggestedPeople(householdId),
+      ])
+    : [[], []];
 
   return (
     <>
@@ -43,6 +51,9 @@ export default async function MembersPage({
         <h1 className="text-xl font-semibold tracking-tight">Members</h1>
 
         {canManage ? <AddMember householdId={householdId} /> : null}
+        {canManage ? (
+          <SuggestedPeople householdId={householdId} people={suggestions} />
+        ) : null}
 
         <Card className="overflow-hidden">
           <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
@@ -69,6 +80,14 @@ export default async function MembersPage({
         {canManage ? (
           <PendingInvitations householdId={householdId} invitations={invitations} />
         ) : null}
+
+        <HouseholdDangerZone
+          householdId={householdId}
+          canLeave={!household.viaSuperUser}
+          canArchive={
+            !household.viaSuperUser && can(household.yourRole, "ARCHIVE_HOUSEHOLD")
+          }
+        />
       </main>
       <HouseholdNav householdId={householdId} />
     </>

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { listHouseholds } from "@/lib/households/queries";
+import { ArchivedHouseholds } from "@/components/households/archived-households";
+import { listArchivedHouseholds, listHouseholds } from "@/lib/households/queries";
 import { formatSignedMoney } from "@/lib/money";
 import { balanceToneClass, ROLE_TONES, STATUS_BADGE_BASE } from "@/lib/ui/status";
 import { StaggerItem } from "@/components/ui/motion";
@@ -19,7 +20,10 @@ export const metadata: Metadata = {
  * nothing here links into one.
  */
 export default async function HouseholdsPage() {
-  const households = await listHouseholds();
+  const [households, archived] = await Promise.all([
+    listHouseholds(),
+    listArchivedHouseholds(),
+  ]);
   const totalCents = households.reduce(
     (sum, household) => sum + household.yourNetCents,
     0,
@@ -98,6 +102,9 @@ export default async function HouseholdsPage() {
           })}
         </div>
       )}
+      <div className="mt-6">
+        <ArchivedHouseholds items={archived} />
+      </div>
     </main>
   );
 }
