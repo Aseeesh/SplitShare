@@ -9,6 +9,7 @@ import urllib.error
 import urllib.request
 
 from . import config, db
+from .allocation import Share, plan_allocation
 from .limits import PLATFORM_KEYS, validate_limit
 
 RETENTION_DAYS = 30
@@ -128,6 +129,78 @@ def purge(args: argparse.Namespace) -> int:
             return 0
         purged = conn.execute("SELECT purge_expired_households(%s)", (RETENTION_DAYS,)).fetchone()[0]
     print(f"purged {purged} household(s)")
+    return 0
+
+
+def backfill_allocations(args: argparse.Namespace) -> int:
+    """Apply old confirmed payments to shares, as confirmation now does.
+
+    Payments confirmed before `payment_allocations` existed never settled any
+    share. This replays them in confirmation order with the same oldest-first
+    rule, so their expenses reach PARTIALLY_PAID / PAID. Idempotent: a payment
+    that already has allocations is skipped. Dry-run unless --apply is given.
+    """
+    applied = 0
+    with db.connect() as conn:
+        payments = conn.execute(
+            "SELECT p.id, p.household_id, p.from_user_id, p.to_user_id, p.amount_cents, c.confirmed_at "
+            "FROM payments p JOIN payment_confirmations c ON c.payment_id = p.id "
+            "WHERE p.expense_split_id IS NULL AND p.reverses_payment_id IS NULL AND p.amount_cents > 0 "
+            "AND NOT EXISTS (SELECT 1 FROM payment_allocations a WHERE a.payment_id = p.id) "
+            "ORDER BY c.confirmed_at, p.id"
+        ).fetchall()
+        for pid, household, payer, payee, amount, confirmed_at in payments:
+            rows = conn.execute(
+                "SELECT s.id, s.expense_id, s.amount_cents FROM expense_splits s JOIN expenses e ON e.id = s.expense_id "
+                "WHERE s.user_id = %s AND s.acceptance = 'ACCEPTED' AND s.settled_at IS NULL "
+                "AND e.household_id = %s AND e.reverses_expense_id IS NULL "
+                "AND e.status IN ('ACCEPTED', 'PARTIALLY_PAID') "
+                "AND EXISTS (SELECT 1 FROM expense_funders f WHERE f.expense_id = e.id AND f.user_id = %s) "
+                "ORDER BY e.date, s.created_at",
+                (payer, household, payee),
+            ).fetchall()
+            shares = []
+            for sid, eid, cents in rows:
+                funders = conn.execute(
+                    "SELECT user_id::text, amount_cents FROM expense_funders WHERE expense_id = %s", (eid,)
+                ).fetchall()
+                covers = [
+                    (str(to), int(c))
+                    for to, c in conn.execute(
+                        "SELECT to_user_id, amount_cents FROM payments WHERE expense_split_id = %s "
+                        "AND EXISTS (SELECT 1 FROM payment_confirmations x WHERE x.payment_id = payments.id) "
+                        "UNION ALL SELECT p.to_user_id, a.amount_cents FROM payment_allocations a "
+                        "JOIN payments p ON p.id = a.payment_id WHERE a.expense_split_id = %s",
+                        (sid, sid),
+                    ).fetchall()
+                ]
+                shares.append(Share(str(sid), str(eid), int(cents), [(u, int(c)) for u, c in funders], covers))
+            plan = plan_allocation(shares, str(payee), int(amount))
+            if not plan:
+                continue
+            print(f"payment {pid}: {sum(a.cents for a in plan)} of {amount} across {len(plan)} share(s)")
+            applied += 1
+            if args.apply:
+                settled = {a.share_id for a in plan if a.settles}
+                for a in plan:
+                    conn.execute(
+                        "INSERT INTO payment_allocations (id, payment_id, expense_split_id, amount_cents) "
+                        "VALUES (gen_random_uuid(), %s, %s, %s)",
+                        (pid, a.share_id, a.cents),
+                    )
+                    if a.share_id in settled:
+                        conn.execute("UPDATE expense_splits SET settled_at = %s WHERE id = %s", (confirmed_at, a.share_id))
+                for eid in {a.expense_id for a in plan}:
+                    unsettled = conn.execute(
+                        "SELECT count(*) FROM expense_splits WHERE expense_id = %s AND settled_at IS NULL", (eid,)
+                    ).fetchone()[0]
+                    conn.execute(
+                        "UPDATE expenses SET status = %s, updated_at = now() WHERE id = %s",
+                        ("PAID" if unsettled == 0 else "PARTIALLY_PAID", eid),
+                    )
+                _audit(conn, "ALLOCATIONS_BACKFILLED", "payment", str(pid), None,
+                       {"allocatedCents": sum(a.cents for a in plan), "shares": len(plan)})
+    print(f"{applied} payment(s) {'back-filled' if args.apply else 'would be back-filled (dry run; pass --apply)'}")
     return 0
 
 

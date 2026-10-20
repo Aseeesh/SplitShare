@@ -63,6 +63,39 @@ class WaitTests(unittest.TestCase):
         self.assertEqual(self._run([old, (503, b""), new]), 0)
 
 
+class AllocationTests(unittest.TestCase):
+    def test_apportion_matches_the_typescript_rule(self):
+        from ops.allocation import apportion
+
+        self.assertEqual(apportion(100, [("c", 1), ("a", 1), ("b", 1)]), {"a": 34, "b": 33, "c": 33})
+        self.assertEqual(apportion(0, [("a", 1)]), {})
+
+    def test_oldest_share_first_and_overpayment_is_not_allocated(self):
+        from ops.allocation import Share, plan_allocation
+
+        shares = [
+            Share("s1", "e1", 5000, [("ann", 10000)]),
+            Share("s2", "e2", 3000, [("ann", 6000)]),
+        ]
+        plan = plan_allocation(shares, "ann", 9000)
+        self.assertEqual([(a.share_id, a.cents, a.settles) for a in plan], [("s1", 5000, True), ("s2", 3000, True)])
+
+    def test_partial_payment_does_not_settle(self):
+        from ops.allocation import Share, plan_allocation
+
+        plan = plan_allocation([Share("s1", "e1", 5000, [("ann", 10000)])], "ann", 2000)
+        self.assertEqual([(a.cents, a.settles) for a in plan], [(2000, False)])
+
+    def test_a_payment_to_one_funder_covers_only_their_portion(self):
+        from ops.allocation import Share, plan_allocation
+
+        share = Share("s1", "e1", 10000, [("ann", 6000), ("bob", 4000)])
+        first = plan_allocation([share], "ann", 7000)
+        self.assertEqual([(a.cents, a.settles) for a in first], [(6000, False)])
+        second = plan_allocation([share], "bob", 4000)
+        self.assertEqual([(a.cents, a.settles) for a in second], [(4000, True)])
+
+
 class CliTests(unittest.TestCase):
     def test_user_scope_needs_a_target(self):
         self.assertEqual(cli.main(["set-limit", "user", "5"]), 2)

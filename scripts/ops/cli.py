@@ -43,6 +43,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dry-run", action="store_true")
     p.set_defaults(run=commands.purge)
 
+    p = sub.add_parser("backfill-allocations", help="apply pre-allocation payments to shares")
+    p.add_argument("--apply", action="store_true", help="write changes (default is a dry run)")
+    p.set_defaults(run=commands.backfill_allocations)
+
     p = sub.add_parser("run-cron", help="trigger reminders + recurring expenses")
     p.add_argument("--url")
     p.set_defaults(run=commands.run_cron)
