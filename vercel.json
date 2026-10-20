@@ -1,4 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm prisma:generate && pnpm prisma:deploy && pnpm build"
+  "buildCommand": "pnpm prisma:generate && pnpm prisma:deploy && pnpm build",
+  "regions": ["sin1"]
 }
