@@ -40,6 +40,7 @@ Production-quality household expense-sharing app on Next.js (App Router) + Postg
 | Vitest | 5.0.3 | |
 | Playwright | 1.63.0 | |
 | Node | 24.21.0 LTS | |
+| Python | 3.13 | ops CLI (`scripts/ops`), psycopg |
 | pnpm | 12.9.1 | |
 
 **Read `.claude/skills/versions.skill.md` before writing any code.** It documents the
@@ -74,6 +75,12 @@ Also available: Prisma's own agent skills under `.claude/skills/prisma-*` (symli
 | Manage categories/settings | ✅ | ❌ | ❌ |
 | Lock expense | ✅ | ❌ | ❌ |
 | View audit logs | ✅ | ❌ | ❌ |
+
+**Amendment — see §23.** This matrix is the *default*. A super user can override any
+cell per role at runtime (`PermissionOverride`); code must call
+`requireCapability` / `canWith`, never test `role === "ADMIN"` directly. Super users
+bypass membership for `superUserCan` capabilities only. Archived and suspended
+households are read-only for everyone (`READ_ONLY_CAPABILITIES`).
 
 ## §6 Expense creation input contract
 
@@ -229,7 +236,9 @@ See `.claude/skills/ui.skill.md`. Single source of truth for status colors is
 
 ## §17 Notifications
 
-In-app only (no websockets). `notifications` rows are created inside the same transaction
+In-app only (no websockets). Lifecycle events (member added/removed/left, household
+deactivated/restored, offsets proposed/confirmed/withdrawn) notify through
+`src/lib/notifications/members.ts`. `notifications` rows are created inside the same transaction
 as the triggering financial change. The bell polls every 30s on window focus.
 
 ## §18 Reminders
@@ -247,8 +256,12 @@ is set; otherwise every function is a no-op that logs. Functions: `sendInvitatio
 
 ## §20 Cron
 
-`app/api/cron/reminders/route.ts`, scheduled hourly by `vercel.json`. It must verify the
-`Authorization: Bearer $CRON_SECRET` header and return 401 otherwise.
+`app/api/cron/reminders/route.ts` (reminders, recurring expenses, 30-day purge). It must
+verify `Authorization: Bearer $CRON_SECRET` (`src/lib/cron/auth.ts`) and return 401
+otherwise. **It is scheduled by `.github/workflows/maintenance.yml` (hourly, Python
+`cli.py purge` + `cli.py run-cron`), not by Vercel cron** — see §26. `CRON_SECRET` must be
+the *same value* in GitHub secrets and the host's env; a mismatch shows up as a 401 in
+the Maintenance run.
 
 ## §21 Security requirements
 
@@ -267,6 +280,81 @@ is set; otherwise every function is a no-op that logs. Functions: `sendInvitatio
 - DB constraint tests: Vitest against a real Postgres (`TEST_DATABASE_URL`); they must
   **skip cleanly**, not fail, when no database is reachable.
 - E2E: Playwright, `tests/e2e/`.
+
+## §23 Multi-organisation model and roles
+
+- A **household** is the organisation. Anyone who signs in may create households and is
+  that household's ADMIN; a person can belong to many. Emails are unique
+  case-insensitively (no duplicate accounts); an admin invites by email and the invitee
+  accepts to join.
+- **Super user**: `users.is_super_user`, bootstrapped from `SUPERUSER_EMAILS` or
+  `cli.py promote`. Sees every household and user at `/admin`, may suspend users
+  (`disabledAt`) and households, edit limits and the permission matrix, and perform
+  `superUserCan` actions without membership (`viaSuperUser`). Cannot suspend themselves
+  or another super user. Every such change writes to `platform_audit_logs` via
+  `src/lib/audit/platform.ts` (append-only, same transaction).
+- **Limits** (`PlatformSetting` + overrides, `src/lib/households/limits.ts`):
+  `max_households_per_admin` = 20, `max_members_per_household` = 10; per-user
+  `maxHouseholdsOverride`, per-household `maxMembersOverride`. Pending invites count
+  toward the member limit. Known gap: checks are not race-proof under concurrent
+  requests (would need an advisory lock).
+- **Membership changes**: admin removes members or changes roles; a member may leave;
+  the only admin can neither leave nor be demoted. Admins get recommendations of people
+  they share other households with.
+
+## §24 Household lifecycle
+
+`ACTIVE → ARCHIVED` (admin deactivates) `→ purged` after 30 days; admin may restore
+while ARCHIVED. `SUSPENDED` is the super-user equivalent and only a super user lifts it.
+Non-ACTIVE households are hidden from members and read-only; super users can still view.
+Purging is SQL `purge_expired_households(retention_days)`, the only code allowed to set
+the transaction-local `app.purging_archived` flag that `reject_mutation()` honours — never
+delete household rows any other way.
+
+## §25 Pairwise ledger, offsets and allocations
+
+- `src/lib/ledger/pairwise.ts` derives who owes whom across *all* expenses
+  (`apportion`, `expenseDebts`, `outstandingDebts`, `pairPositions`). Nothing is stored.
+- **Cancel-out**: when two people owe each other, one proposes an `OFFSET` payment pair
+  (two legs, reference `offset:<groupId>:<proposerId>`); the counterparty confirms both
+  legs together; it expires after 7 days; the proposer withdraws via reversal legs.
+  Offsets only apply to ACCEPTED / PARTIALLY_PAID expenses.
+- **`payment_allocations`** (append-only): a confirmed payment settles the payer's
+  oldest unsettled shares owed to the recipient (multi-funder: pro-rata, capped);
+  offsets allocate too. This is what moves an expense to PAID. `cli.py
+  backfill-allocations` repairs history (dry run by default).
+- **Corrections**: editing = `createExpenseCore` + `reverseInTransaction` in one
+  transaction; deleting = a reversal. Reversals carry negated funder rows.
+
+## §26 Architecture and deployment
+
+Provider-agnostic on purpose: swapping host or database must be config, not code.
+
+| Concern | Where | Notes |
+|---|---|---|
+| App | Vercel (`clean-nz/splitshare`), functions pinned to `sin1` in `vercel.json` | Node runtime, `PrismaPg` driver; `DATABASE_DRIVER` unset |
+| Database | **Self-hosted Postgres 16**, Docker container `splitshare-postgres` on a shared Jakarta VPS, port 5434 | Own volume `splitshare-pgdata`; certs in `/opt/splitshare-pg`. The same server runs another project's containers and nginx — **never touch them**, never enable ufw or edit nginx |
+| TLS | Self-signed cert, pinned via `DATABASE_CA_CERT`; `rejectUnauthorized: true` | Never use `sslmode=no-verify`. CI writes the cert to a file and appends `sslmode=verify-full&sslrootcert=` to `DIRECT_URL` |
+| Neon | Former database, kept as rollback only | Point `DATABASE_URL`/`DIRECT_URL` back and unset `DATABASE_CA_CERT` |
+| CI/CD | `ci.yml` → `deploy.yml` | gates → migrate → `scripts/deploy/deploy.sh $DEPLOY_TARGET` → wait for `/api/health` sha → smoke. Targets: `vercel-hook` (default), `vercel`, `cloudflare` |
+| Scheduled jobs | `maintenance.yml` | hourly, Python ops CLI |
+| Ops | `scripts/ops/cli.py` | status, promote, set-limit, purge, backfill-allocations, run-cron, wait, smoke; writes platform audit rows |
+
+- **Latency rule**: keep function region next to the database (Jakarta DB ↔ `sin1`; a
+  Virginia function made every query ~350 ms). Prefer fewer sequential queries per page
+  (`Promise.all`, merge session + membership lookups) over server tuning.
+- Secrets live in GitHub Actions secrets and Vercel env (`DATABASE_URL`, `DIRECT_URL`,
+  `DATABASE_CA_CERT`, `CRON_SECRET`, `AUTH_SECRET`, `VERCEL_DEPLOY_HOOK_URL`, …). Rotate
+  `CRON_SECRET` in both places together. Never print or commit them; `.env` is gitignored.
+- `/api/health` returns `{ok, sha, db}`; `src/lib/health.ts` reads env so `app/` stays §21-clean.
+
+## §27 Mobile / PWA UX
+
+Native-feel, phone-first: bottom tab bar (`tab-bar`, `global-tabs`, `household-nav`),
+pull-to-refresh, FAB that hides on scroll, `template.tsx` page transitions, skeleton
+`loading.tsx`, animated money (`animated-money`), Recharts + motion for weekly/monthly/
+per-organisation totals and income received vs pending (`src/lib/overview/queries.ts`).
+E2E runs only at phone viewports. Money is still rendered via `formatMoney` (§13).
 
 ## §40 Acceptance scenario (the E2E that must pass)
 
@@ -288,6 +376,17 @@ is set; otherwise every function is a no-op that logs. Functions: `sendInvitatio
 3. `pnpm lint && pnpm typecheck && pnpm test` — fix every failure.
 4. `git add -A && git commit -m "<type>(<scope>): <msg>"`
 
+## §41a Testing gotchas
+
+- DB-backed tests skip without `TEST_DATABASE_URL`, so trigger bugs show only in CI. Before
+  pushing DB/trigger changes run the suite against a *scratch* Postgres, never production
+  (tests TRUNCATE). `tests/integration/db.ts` `reset()` must list every table, including
+  `platform_settings`, `permission_overrides`, `platform_audit_logs`.
+- E2E: `pnpm test:e2e` = `tsx tests/e2e/seed-cli.ts && playwright test` with
+  `E2E_DATABASE_URL`; sessions are seeded DB rows (cookie `authjs.session-token`).
+- Run `pnpm lint && pnpm typecheck && pnpm test` and stop on the first failure before
+  pushing; CI blocks the deploy on any failure.
+
 ## §42 Commands
 
 ```bash
@@ -304,4 +403,5 @@ pnpm prisma:migrate     # prisma migrate dev
 pnpm prisma:deploy      # prisma migrate deploy
 pnpm prisma:studio      # prisma studio
 pnpm db:reset           # prisma migrate reset --force
+python scripts/ops/cli.py status   # ops CLI (see §26 and scripts/README.md)
 ```

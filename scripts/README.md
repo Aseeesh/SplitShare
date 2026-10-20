@@ -30,5 +30,8 @@ The GitHub workflow picks the target from the repo variable `DEPLOY_TARGET`
 | variable | `DEPLOY_TARGET` | optional: `vercel-hook` (default), `vercel`, `cloudflare` |
 
 Existing secrets (`DATABASE_URL`, `DIRECT_URL`, `CRON_SECRET`, …) are reused.
+`DATABASE_CA_CERT` (PEM) is needed when the database uses a private certificate: the
+workflows write it to a file and connect with `sslmode=verify-full`. `CRON_SECRET` must
+match the host's value or the Maintenance run fails with 401.
 If Vercel's own Git deploys are still on, each push deploys twice; turn them off
 under Project → Settings → Git once the Action works.

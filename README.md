@@ -52,8 +52,20 @@ Editing or deleting an expense is a reversal plus a replacement, in one transact
 ## Stack
 
 Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS 4 ·
-Prisma 7 with the `pg` driver adapter · PostgreSQL (Neon in production) ·
+Prisma 7 with the `pg` driver adapter · PostgreSQL 16 (self-hosted in production; Neon-compatible) ·
 Auth.js v5 · Zod 4 · Vitest · Playwright
+
+## Architecture
+
+| Piece | Choice |
+|---|---|
+| App | Vercel, functions pinned to Singapore (`sin1`) |
+| Database | Postgres 16 in Docker on a VPS in Jakarta, TLS with a pinned certificate (`DATABASE_CA_CERT`) |
+| Deploys | GitHub Actions: gates → migrate → deploy → wait for `/api/health` → smoke |
+| Scheduled jobs | GitHub Actions (hourly purge + reminders) through the Python ops CLI |
+
+Host and database are swappable by configuration; keep the function region next to
+the database, since query round-trips dominate page load time.
 
 ## Getting started
 
@@ -143,4 +155,8 @@ commit, and smoke-tests it. The target is chosen by the repo variable
 `DEPLOY_TARGET` (`vercel-hook` by default; `vercel` and `cloudflare` also
 exist) — see `scripts/README.md` for the one-time setup. A scheduled workflow
 runs the 30-day purge and the reminders job, so neither depends on a platform cron.
+
+Required GitHub secrets include `DATABASE_URL`, `DIRECT_URL`, `DATABASE_CA_CERT` (the
+database's PEM certificate, when it is self-signed), `CRON_SECRET` (must equal the
+value in the host's environment) and `AUTH_SECRET`.
 
