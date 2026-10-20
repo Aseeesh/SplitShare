@@ -114,6 +114,8 @@ export async function listPaymentsAwaitingYou(
         toUserId: { in: [membership.userId, ...managed.map((user) => user.id)] },
         confirmation: { is: null },
         reversedBy: { is: null },
+        // Cancel-outs are confirmed as a pair, from the ledger card.
+        method: { not: "OFFSET" },
         // A reversal row is itself a correction, not something to confirm.
         reversesPaymentId: null,
       },

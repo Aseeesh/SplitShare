@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AppHeader } from "@/components/layout/app-header";
 import { HouseholdNav } from "@/components/layout/household-nav";
+import { PairLedger } from "@/components/payments/pair-ledger";
 import { ConfirmPayments } from "@/components/payments/confirm-payments";
 import { RecordPayment } from "@/components/payments/record-payment";
 import { PaymentStatusBadge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { NotAMemberError } from "@/lib/auth/errors";
 import { requireAuth } from "@/lib/auth/guards";
 import { can } from "@/lib/auth/permissions";
 import { getHousehold } from "@/lib/households/queries";
+import { getPairLedger } from "@/lib/ledger/queries";
 import { listPayments, listPaymentsAwaitingYou } from "@/lib/payments/queries";
 import { minimizeTransfers } from "@/lib/settlements/minimize";
 
@@ -33,9 +35,10 @@ export default async function PaymentsPage({
     throw error;
   }
 
-  const [awaiting, recent] = await Promise.all([
+  const [awaiting, recent, ledger] = await Promise.all([
     listPaymentsAwaitingYou(householdId),
     listPayments(householdId, 25),
+    getPairLedger(householdId),
   ]);
 
   // What the viewer owes each person, from the settle-up plan, so the record
@@ -66,6 +69,12 @@ export default async function PaymentsPage({
         {canPay ? (
           <ConfirmPayments householdId={householdId} payments={awaiting} />
         ) : null}
+
+        <PairLedger
+          householdId={householdId}
+          currency={household.currency}
+          ledger={ledger}
+        />
 
         {canPay ? (
           <RecordPayment

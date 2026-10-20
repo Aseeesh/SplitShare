@@ -91,6 +91,8 @@ enum PaymentMethod {
   CASH
   BANK_TRANSFER
   CARD
+  /// Two members cancelling what they owe each other; always created as a pair.
+  OFFSET
   OTHER
 }
 

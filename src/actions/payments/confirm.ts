@@ -41,6 +41,7 @@ export async function confirmPayment(
         currency: true,
         expenseSplitId: true,
         reversesPaymentId: true,
+        method: true,
         confirmation: { select: { id: true } },
         reversedBy: { select: { id: true } },
         fromUser: { select: { name: true, email: true, isPlaceholder: true } },
@@ -50,6 +51,11 @@ export async function confirmPayment(
     // §2.4(d) — another household's payment id reads as missing.
     if (!payment || payment.householdId !== data.householdId) {
       return fail("WRONG_HOUSEHOLD", "Not found");
+    }
+
+    // A cancel-out is two legs that must be confirmed together, never one alone.
+    if (payment.method === "OFFSET") {
+      return fail("CONFLICT", "Confirm this as a cancel-out instead.");
     }
 
     // §9 — only the recipient, or a placeholder recipient's manager.
