@@ -70,6 +70,21 @@ export function notificationCopy(
         title: `${context.actorName} joined ${context.householdName}`,
         body: "They can now be included in expenses.",
       };
+    case "MEMBER_LEFT":
+      return {
+        title: `${context.actorName} left ${context.householdName}`,
+        body: "Their past expenses and balances stay on the record.",
+      };
+    case "HOUSEHOLD_DEACTIVATED":
+      return {
+        title: `${context.householdName} was deactivated`,
+        body: "It is hidden and read-only. An admin can restore it within 30 days.",
+      };
+    case "HOUSEHOLD_RESTORED":
+      return {
+        title: `${context.householdName} is active again`,
+        body: "You can add expenses and payments as before.",
+      };
     case "EXPENSE_LOCKED":
       return {
         title: `${context.actorName} locked ${what}`,

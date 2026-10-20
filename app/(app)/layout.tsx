@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { signOut } from "@/lib/auth";
 import { getOptionalUser } from "@/lib/auth/guards";
+import { countMyUnread } from "@/lib/notifications/queries";
 
 /**
  * The authenticated app shell.
@@ -12,10 +13,12 @@ import { getOptionalUser } from "@/lib/auth/guards";
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await getOptionalUser();
+  const unread = user ? await countMyUnread() : 0;
 
   return (
     <AppShell
       user={user}
+      unreadNotifications={unread}
       signOutAction={async () => {
         "use server";
         await signOut({ redirectTo: "/" });

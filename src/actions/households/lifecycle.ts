@@ -11,6 +11,7 @@ import {
   requireHouseholdMember,
 } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/client";
+import { notifyHouseholdMembers } from "@/lib/notifications/members";
 
 const householdIdSchema = z.object({ householdId: z.uuid() });
 
@@ -25,6 +26,7 @@ export async function archiveHousehold(input: unknown): Promise<ActionResult<nul
   try {
     const data = householdIdSchema.parse(input);
     const membership = await requireCapability(data.householdId, "ARCHIVE_HOUSEHOLD");
+    const actor = await requireAuth();
     const now = new Date();
 
     await prisma.$transaction(async (tx) => {
@@ -43,6 +45,12 @@ export async function archiveHousehold(input: unknown): Promise<ActionResult<nul
         entityId: data.householdId,
         before: { status: "ACTIVE" },
         after: { status: "ARCHIVED", archivedAt: now.toISOString() },
+      });
+      await notifyHouseholdMembers(tx, {
+        householdId: data.householdId,
+        actorUserId: membership.userId,
+        actorName: actor.name ?? actor.email ?? "An admin",
+        type: "HOUSEHOLD_DEACTIVATED",
       });
     });
 
@@ -95,6 +103,12 @@ export async function restoreHousehold(input: unknown): Promise<ActionResult<nul
         before: { status: "ARCHIVED" },
         after: { status: "ACTIVE" },
       });
+      await notifyHouseholdMembers(tx, {
+        householdId: data.householdId,
+        actorUserId: user.id,
+        actorName: user.name ?? user.email ?? "An admin",
+        type: "HOUSEHOLD_RESTORED",
+      });
     });
 
     revalidatePath("/households");
@@ -138,6 +152,7 @@ export async function leaveHousehold(input: unknown): Promise<ActionResult<null>
       }
     }
 
+    const leaver = await requireAuth();
     await prisma.$transaction(async (tx) => {
       const member = await tx.householdMember.update({
         where: {
@@ -157,6 +172,12 @@ export async function leaveHousehold(input: unknown): Promise<ActionResult<null>
         entityId: member.id,
         before: { userId: membership.userId, role: membership.role },
         after: { userId: membership.userId, left: true },
+      });
+      await notifyHouseholdMembers(tx, {
+        householdId: data.householdId,
+        actorUserId: membership.userId,
+        actorName: leaver.name ?? leaver.email ?? "A member",
+        type: "MEMBER_LEFT",
       });
     });
 

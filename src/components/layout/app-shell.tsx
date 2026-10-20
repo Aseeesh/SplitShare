@@ -9,6 +9,7 @@ import { Home, Menu, ShieldCheck, User, Users, X, type LucideIcon } from "lucide
 import { SignOutButton } from "@/components/pwa/sign-out-button";
 
 import { GlobalTabs } from "./global-tabs";
+import { NotificationBell } from "./notification-bell";
 import { PullToRefresh } from "./pull-to-refresh";
 
 interface ShellUser {
@@ -43,10 +44,12 @@ function isActive(href: string, pathname: string, exact = false): boolean {
  */
 export function AppShell({
   user,
+  unreadNotifications = 0,
   signOutAction,
   children,
 }: {
   user: ShellUser | null;
+  unreadNotifications?: number;
   signOutAction: () => Promise<void>;
   children: React.ReactNode;
 }) {
@@ -134,7 +137,11 @@ export function AppShell({
             })}
           </nav>
 
-          <div className="ml-auto hidden items-center gap-3 lg:flex">
+          <div className="ml-auto flex items-center gap-1">
+            <NotificationBell initialUnread={unreadNotifications} />
+          </div>
+
+          <div className="hidden items-center gap-3 lg:flex">
             {user.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img

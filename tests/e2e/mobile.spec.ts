@@ -92,6 +92,17 @@ test.describe("phone screens (super user)", () => {
     }
   });
 
+  test("notifications", async ({ page }) => {
+    await page.goto("/");
+    // The bell shows the two unread notifications seeded for Ann.
+    await expect(
+      page.getByRole("link", { name: "2 unread notifications" }),
+    ).toBeVisible();
+    await page.getByRole("link", { name: "2 unread notifications" }).click();
+    await expect(page.getByText("Bob added Movie night")).toBeVisible();
+    await checkScreen(page, "notifications");
+  });
+
   test("profile and console", async ({ page }) => {
     await page.goto("/profile");
     await checkScreen(page, "profile");

@@ -9,6 +9,7 @@ import { writeAuditLog } from "@/lib/audit/write";
 import { requireSuperUser } from "@/lib/auth/guards";
 import { ALL_CAPABILITIES, type Capability } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/client";
+import { notifyHouseholdMembers } from "@/lib/notifications/members";
 import { getPlatformLimits } from "@/lib/platform/limits";
 import { SETTING_KEYS } from "@/lib/platform/limits-core";
 
@@ -158,6 +159,12 @@ export async function setHouseholdSuspended(input: unknown): Promise<ActionResul
         entityId: data.householdId,
         before: { status: household.status },
         after: { status: next },
+      });
+      await notifyHouseholdMembers(tx, {
+        householdId: data.householdId,
+        actorUserId: actor.id,
+        actorName: "A platform administrator",
+        type: data.suspended ? "HOUSEHOLD_DEACTIVATED" : "HOUSEHOLD_RESTORED",
       });
       await writePlatformAudit(tx, {
         actorUserId: actor.id,

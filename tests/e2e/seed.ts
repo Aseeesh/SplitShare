@@ -171,6 +171,29 @@ export async function seed(connectionString: string): Promise<void> {
       ago: 4,
     });
 
+    await prisma.notification.createMany({
+      data: [
+        {
+          householdId: flat.id,
+          userId: ann.id,
+          type: "EXPENSE_CREATED",
+          title: "Bob added Movie night",
+          body: "Your share is $20.00. Accept it to confirm.",
+          entityType: "household",
+          entityId: flat.id,
+        },
+        {
+          householdId: flat.id,
+          userId: ann.id,
+          type: "MEMBER_JOINED",
+          title: "Dee joined Flat 3",
+          body: "They can now be included in expenses.",
+          entityType: "household",
+          entityId: flat.id,
+        },
+      ],
+    });
+
     const sessionExpiry = new Date(Date.now() + 7 * 86_400_000);
     await prisma.session.createMany({
       data: [
