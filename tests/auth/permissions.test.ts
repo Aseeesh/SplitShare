@@ -82,6 +82,7 @@ describe("superUserCan", () => {
       "MANAGE_MEMBERS",
       "MANAGE_SETTINGS",
       "VIEW_AUDIT_LOGS",
+      "EDIT_ANY_EXPENSE",
       "DELETE_ANY_EXPENSE",
     ] as const) {
       expect(superUserCan(c)).toBe(true);
@@ -91,7 +92,6 @@ describe("superUserCan", () => {
   it("never lets a non-member super user touch financial records", () => {
     for (const c of [
       "CREATE_EXPENSE",
-      "EDIT_ANY_EXPENSE",
       "ACCEPT_OWN_SPLIT",
       "RECORD_OWN_PAYMENT",
       "CONFIRM_PAYMENT_RECEIVED",

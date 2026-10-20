@@ -120,7 +120,7 @@ export default async function ExpensePage({
           status={expense.status}
           canLock={can(household.yourRole, "LOCK_EXPENSE")}
           canReverse={canDelete}
-          canCorrect={canEdit && can(household.yourRole, "CREATE_EXPENSE")}
+          canCorrect={canEdit}
         />
 
         {expense.receiptFileId ? (

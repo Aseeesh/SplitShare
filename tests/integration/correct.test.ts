@@ -171,3 +171,65 @@ describeDb("correcting an expense", () => {
     ).not.toBe("REVERSED");
   });
 });
+
+describeDb("a super user correcting someone else's expense", () => {
+  beforeEach(async () => {
+    await db!.reset();
+  });
+
+  it("can replace an expense in a household they do not belong to, and a plain member cannot", async () => {
+    const { prisma } = db!;
+    const [ann, bob, root] = await Promise.all(["Ann", "Bob", "Root"].map(user));
+    await prisma.user.update({ where: { id: root!.id }, data: { isSuperUser: true } });
+
+    actAs(ann!);
+    const { householdId } = expectOk(
+      await createHousehold({ name: "Flat", currency: "NZD" }),
+    );
+    await prisma.householdMember.create({
+      data: { householdId, userId: bob!.id, role: "MEMBER" },
+    });
+    const base = {
+      householdId,
+      paidByUserId: ann!.id,
+      categoryId: null,
+      description: "Power",
+      currency: "NZD",
+      date: new Date("2026-10-07T00:00:00.000Z"),
+      splitMethod: "EQUAL" as const,
+      participants: [{ userId: ann!.id }, { userId: bob!.id }],
+    };
+    const original = expectOk(await createExpense({ ...base, amountCents: 10000 }));
+
+    // Bob did not create it and is not an admin, so he may not edit it.
+    actAs(bob!);
+    expect(
+      (
+        await correctExpense({
+          ...base,
+          amountCents: 11000,
+          correctsExpenseId: original.expenseId,
+        })
+      ).ok,
+    ).toBe(false);
+
+    // The super user is in no household, yet can correct it; the trail names them.
+    actAs(root!);
+    const fixed = expectOk(
+      await correctExpense({
+        ...base,
+        amountCents: 11000,
+        correctsExpenseId: original.expenseId,
+      }),
+    );
+    expect(
+      (await prisma.expense.findUniqueOrThrow({ where: { id: original.expenseId } }))
+        .status,
+    ).toBe("REVERSED");
+    const audit = await prisma.auditLog.findFirstOrThrow({
+      where: { action: "EXPENSE_REVERSED", entityId: original.expenseId },
+    });
+    expect(audit.actorUserId).toBe(root!.id);
+    expect(fixed.expenseId).not.toBe(original.expenseId);
+  });
+});

@@ -32,16 +32,18 @@ export async function correctExpense(
     if (!original || original.householdId !== householdId) {
       return fail("WRONG_HOUSEHOLD", "Not found");
     }
-    await requireCapability(
-      householdId,
-      original.createdByUserId === actor.id ? "EDIT_OWN_EXPENSE" : "EDIT_ANY_EXPENSE",
-    );
+    const editRight =
+      original.createdByUserId === actor.id ? "EDIT_OWN_EXPENSE" : "EDIT_ANY_EXPENSE";
+    await requireCapability(householdId, editRight);
     if (original.alreadyReversed) {
       return fail("CONFLICT", "That expense has already been replaced or deleted.");
     }
     statusAfterReversal(original.status); // refuses a LOCKED expense before any work
 
     return await createExpenseCore(input, {
+      // The edit right is what authorises writing the replacement, so a super
+      // user who is not a member (and so cannot "create") can still correct.
+      capability: editRight,
       inTransaction: async (tx, newExpenseId) => {
         await reverseInTransaction(tx, original, {
           actorUserId: actor.id,

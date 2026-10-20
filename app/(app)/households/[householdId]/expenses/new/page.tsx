@@ -23,8 +23,13 @@ export default async function NewExpensePage({
 
   try {
     // §5 — a VIEWER has no business on this page at all, so it is refused here
-    // rather than only when the form is submitted.
-    await requireCapability(householdId, "CREATE_EXPENSE");
+    // rather than only when the form is submitted. A correction is authorised by
+    // the edit right instead (checked below, per expense).
+    if (typeof correct !== "string") {
+      await requireCapability(householdId, "CREATE_EXPENSE");
+    } else {
+      await requireCapability(householdId, "VIEW_HOUSEHOLD");
+    }
   } catch (error) {
     if (error instanceof NotAMemberError || error instanceof InsufficientRoleError) {
       notFound();

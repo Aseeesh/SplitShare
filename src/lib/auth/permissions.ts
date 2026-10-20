@@ -114,9 +114,11 @@ const SUPER_USER_CAPABILITIES: readonly Capability[] = [
   "MANAGE_MEMBERS",
   "MANAGE_SETTINGS",
   "VIEW_AUDIT_LOGS",
-  // Deleting is a reversal, never an in-place change: audited, attributed to
-  // the super user, and leaving the original row on the record. Editing is not
-  // granted: a correction creates a new expense, which needs a real member.
+  // Delete and edit are both reversals, never in-place changes: audited,
+  // attributed to the super user, with the original left on the record. An edit
+  // creates the replacement through the normal path, so every participant must
+  // still be a real member of the household.
+  "EDIT_ANY_EXPENSE",
   "DELETE_ANY_EXPENSE",
 ];
 

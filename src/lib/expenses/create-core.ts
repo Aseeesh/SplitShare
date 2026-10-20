@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { Prisma } from "@/generated/prisma-node/client";
 import { fail, ok, toActionResult, type ActionResult } from "@/lib/actions/result";
+import type { Capability } from "@/lib/auth/permissions";
 import { writeAuditLog } from "@/lib/audit/write";
 import {
   assertBelongsToHousehold,
@@ -28,6 +29,8 @@ import { computeSplits } from "@/lib/splits/engine";
  * engine has proved they sum to the total.
  */
 export interface CreateExpenseOptions {
+  /** The right needed to write this expense. Defaults to creating one. */
+  capability?: Capability;
   /**
    * Runs inside the same transaction, right after the expense is created. Used
    * to make a correction atomic: the original is reversed together with the
@@ -52,7 +55,10 @@ export async function createExpenseCore(
         fieldErrors: { funders: ["Sum of contributions must equal the total"] },
       });
     }
-    const membership = await requireCapability(data.householdId, "CREATE_EXPENSE");
+    const membership = await requireCapability(
+      data.householdId,
+      options.capability ?? "CREATE_EXPENSE",
+    );
     consumeRateLimit("CREATE_EXPENSE", membership.userId);
 
     // §12's view sums amount_cents without grouping by currency, so an expense
