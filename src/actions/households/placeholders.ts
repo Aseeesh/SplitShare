@@ -6,6 +6,7 @@ import { fail, ok, toActionResult, type ActionResult } from "@/lib/actions/resul
 import { writeAuditLog } from "@/lib/audit/write";
 import { requireCapability } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/client";
+import { memberLimitViolation } from "@/lib/households/limits";
 import { placeholderEmail } from "@/lib/households/placeholders";
 
 import { addPlaceholderMemberSchema, renamePlaceholderSchema } from "./schema";
@@ -31,6 +32,11 @@ export async function addPlaceholderMember(
   try {
     const data = addPlaceholderMemberSchema.parse(input);
     const membership = await requireCapability(data.householdId, "MANAGE_MEMBERS");
+
+    const limit = await memberLimitViolation(data.householdId);
+    if (limit) {
+      return fail("CONFLICT", limit);
+    }
 
     // Two members called "Bob" in one household is a support problem, not a
     // data-integrity one, so this is a friendly check rather than a constraint.

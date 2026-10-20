@@ -24,6 +24,11 @@ const EXPECTED: Record<Capability, Record<HouseholdRole, boolean>> = {
   MANAGE_SETTINGS: { ADMIN: true, MEMBER: false, VIEWER: false },
   LOCK_EXPENSE: { ADMIN: true, MEMBER: false, VIEWER: false },
   VIEW_AUDIT_LOGS: { ADMIN: true, MEMBER: false, VIEWER: false },
+  EDIT_OWN_EXPENSE: { ADMIN: true, MEMBER: true, VIEWER: false },
+  DELETE_OWN_EXPENSE: { ADMIN: true, MEMBER: true, VIEWER: false },
+  EDIT_ANY_EXPENSE: { ADMIN: true, MEMBER: false, VIEWER: false },
+  DELETE_ANY_EXPENSE: { ADMIN: true, MEMBER: false, VIEWER: false },
+  ARCHIVE_HOUSEHOLD: { ADMIN: true, MEMBER: false, VIEWER: false },
 };
 
 const ROLES: HouseholdRole[] = ["ADMIN", "MEMBER", "VIEWER"];
@@ -60,6 +65,7 @@ describe("§5 role matrix", () => {
     expect(member).not.toContain("MANAGE_SETTINGS");
     expect(member).not.toContain("LOCK_EXPENSE");
     expect(member).not.toContain("VIEW_AUDIT_LOGS");
+    expect(member).not.toContain("ARCHIVE_HOUSEHOLD");
   });
 
   it("grants an ADMIN every capability", () => {
@@ -91,5 +97,29 @@ describe("superUserCan", () => {
     ] as const) {
       expect(superUserCan(c)).toBe(false);
     }
+  });
+});
+
+import { canWith, overrideKey } from "@/lib/auth/permissions";
+
+describe("canWith", () => {
+  it("falls back to the default when there is no override", () => {
+    expect(canWith("MEMBER", "EDIT_ANY_EXPENSE", new Map())).toBe(false);
+  });
+
+  it("lets the super user grant and revoke", () => {
+    const grant = new Map([[overrideKey("MEMBER", "EDIT_ANY_EXPENSE"), true]]);
+    const revoke = new Map([[overrideKey("MEMBER", "DELETE_OWN_EXPENSE"), false]]);
+    expect(canWith("MEMBER", "EDIT_ANY_EXPENSE", grant)).toBe(true);
+    expect(canWith("MEMBER", "DELETE_OWN_EXPENSE", revoke)).toBe(false);
+  });
+
+  it("never strands a household by stripping an admin's core rights", () => {
+    const hostile = new Map([
+      [overrideKey("ADMIN", "MANAGE_MEMBERS"), false],
+      [overrideKey("ADMIN", "VIEW_HOUSEHOLD"), false],
+    ]);
+    expect(canWith("ADMIN", "MANAGE_MEMBERS", hostile)).toBe(true);
+    expect(canWith("ADMIN", "VIEW_HOUSEHOLD", hostile)).toBe(true);
   });
 });

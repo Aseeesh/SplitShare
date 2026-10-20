@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { ok, toActionResult, type ActionResult } from "@/lib/actions/result";
+import { fail, ok, toActionResult, type ActionResult } from "@/lib/actions/result";
 import { writeAuditLog } from "@/lib/audit/write";
 import { requireAuth } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/client";
+import { householdLimitViolation } from "@/lib/households/limits";
 
 import { createHouseholdSchema } from "./schema";
 
@@ -33,6 +34,11 @@ export async function createHousehold(
   try {
     const user = await requireAuth();
     const data = createHouseholdSchema.parse(input);
+
+    const limit = await householdLimitViolation(user.id);
+    if (limit) {
+      return fail("CONFLICT", limit);
+    }
 
     const householdId = await prisma.$transaction(async (tx) => {
       const household = await tx.household.create({

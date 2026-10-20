@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import type { HouseholdRole } from "@/generated/prisma/enums";
+import type { HouseholdRole, HouseholdStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/client";
 
 import { auth } from "./index";
@@ -14,7 +14,14 @@ import {
 } from "./errors";
 import { canActFor } from "@/lib/households/placeholders";
 
-import { can, CAPABILITY_LABELS, superUserCan, type Capability } from "./permissions";
+import {
+  canWith,
+  CAPABILITY_LABELS,
+  READ_ONLY_CAPABILITIES,
+  superUserCan,
+  type Capability,
+  type PermissionOverrides,
+} from "./permissions";
 
 /**
  * The §2.4 guard chain.
@@ -45,7 +52,15 @@ export interface Membership {
   currency: string;
   /** True when access comes from being a super user rather than a membership. */
   viaSuperUser: boolean;
+  /** Anything but ACTIVE makes the household read-only (and hidden from members). */
+  status: HouseholdStatus;
 }
+
+/** The super user's role-matrix overrides, loaded once per request. */
+export const loadPermissionOverrides = cache(async (): Promise<PermissionOverrides> => {
+  const rows = await prisma.permissionOverride.findMany();
+  return new Map(rows.map((row) => [`${row.role}:${row.capability}`, row.allowed]));
+});
 
 /** (a) — throws rather than redirecting, so server actions can report it. */
 export const requireAuth = cache(async (): Promise<AuthenticatedUser> => {
@@ -101,19 +116,25 @@ export const requireHouseholdMember = cache(
       select: {
         role: true,
         removedAt: true,
-        household: { select: { currency: true } },
+        household: { select: { currency: true, status: true } },
       },
     });
 
+    // A deactivated household disappears for its members; only a super user
+    // can still reach it (to restore it, or to inspect it).
+    const hidden =
+      member?.household.status !== undefined && member.household.status !== "ACTIVE";
+
     // A removed member is treated as a non-member: their history survives, but
     // their access does not.
-    if (member && member.removedAt === null) {
+    if (member && member.removedAt === null && !hidden) {
       return {
         householdId,
         userId: user.id,
         role: member.role,
         currency: member.household.currency,
         viaSuperUser: false,
+        status: member.household.status,
       };
     }
 
@@ -122,7 +143,7 @@ export const requireHouseholdMember = cache(
     if (user.isSuperUser) {
       const household = await prisma.household.findUnique({
         where: { id: householdId },
-        select: { currency: true },
+        select: { currency: true, status: true },
       });
       if (household) {
         return {
@@ -131,6 +152,7 @@ export const requireHouseholdMember = cache(
           role: "VIEWER",
           currency: household.currency,
           viaSuperUser: true,
+          status: household.status,
         };
       }
     }
@@ -145,9 +167,12 @@ export async function requireCapability(
   capability: Capability,
 ): Promise<Membership> {
   const membership = await requireHouseholdMember(householdId);
+  if (membership.status !== "ACTIVE" && !READ_ONLY_CAPABILITIES.includes(capability)) {
+    throw new InsufficientRoleError("This household is deactivated and read-only");
+  }
   const allowed = membership.viaSuperUser
     ? superUserCan(capability)
-    : can(membership.role, capability);
+    : canWith(membership.role, capability, await loadPermissionOverrides());
   if (!allowed) {
     throw new InsufficientRoleError(
       `Your role in this household (${membership.role}) cannot ${CAPABILITY_LABELS[capability]}`,

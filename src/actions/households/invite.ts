@@ -6,6 +6,7 @@ import { fail, ok, toActionResult, type ActionResult } from "@/lib/actions/resul
 import { writeAuditLog } from "@/lib/audit/write";
 import { requireAuth, requireCapability } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/client";
+import { memberLimitViolation } from "@/lib/households/limits";
 import { sendInvitationEmail } from "@/lib/email/send";
 import {
   buildInvitationUrl,
@@ -47,6 +48,11 @@ export async function inviteMember(
     });
     if (existing) {
       return fail("CONFLICT", "That person is already a member of this household.");
+    }
+
+    const limit = await memberLimitViolation(data.householdId);
+    if (limit) {
+      return fail("CONFLICT", limit);
     }
 
     const token = generateInvitationToken();

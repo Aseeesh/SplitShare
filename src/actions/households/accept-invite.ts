@@ -44,7 +44,7 @@ export async function acceptInvitation(
         role: true,
         status: true,
         expiresAt: true,
-        household: { select: { name: true } },
+        household: { select: { name: true, status: true } },
       },
     });
 
@@ -58,6 +58,10 @@ export async function acceptInvitation(
     const rejection = rejectionReason(invitation, now);
     if (rejection) {
       return fail("CONFLICT", REJECTION_MESSAGES[rejection]);
+    }
+
+    if (invitation.household.status !== "ACTIVE") {
+      return fail("CONFLICT", "That household is no longer active.");
     }
 
     const existing = await prisma.householdMember.findUnique({

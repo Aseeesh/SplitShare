@@ -17,7 +17,12 @@ export type Capability =
   | "MANAGE_MEMBERS"
   | "MANAGE_SETTINGS"
   | "LOCK_EXPENSE"
-  | "VIEW_AUDIT_LOGS";
+  | "VIEW_AUDIT_LOGS"
+  | "EDIT_OWN_EXPENSE"
+  | "DELETE_OWN_EXPENSE"
+  | "EDIT_ANY_EXPENSE"
+  | "DELETE_ANY_EXPENSE"
+  | "ARCHIVE_HOUSEHOLD";
 
 /** Exactly the §5 table. ADMIN is not implicitly allowed everything. */
 const MATRIX: Record<Capability, readonly HouseholdRole[]> = {
@@ -30,6 +35,11 @@ const MATRIX: Record<Capability, readonly HouseholdRole[]> = {
   MANAGE_SETTINGS: ["ADMIN"],
   LOCK_EXPENSE: ["ADMIN"],
   VIEW_AUDIT_LOGS: ["ADMIN"],
+  EDIT_OWN_EXPENSE: ["ADMIN", "MEMBER"],
+  DELETE_OWN_EXPENSE: ["ADMIN", "MEMBER"],
+  EDIT_ANY_EXPENSE: ["ADMIN"],
+  DELETE_ANY_EXPENSE: ["ADMIN"],
+  ARCHIVE_HOUSEHOLD: ["ADMIN"],
 };
 
 /** Human wording for denial messages and tooltips. */
@@ -43,10 +53,42 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   MANAGE_SETTINGS: "manage categories and settings",
   LOCK_EXPENSE: "lock an expense",
   VIEW_AUDIT_LOGS: "view the audit log",
+  EDIT_OWN_EXPENSE: "edit your own expense",
+  DELETE_OWN_EXPENSE: "delete your own expense",
+  EDIT_ANY_EXPENSE: "edit any expense",
+  DELETE_ANY_EXPENSE: "delete any expense",
+  ARCHIVE_HOUSEHOLD: "deactivate this household",
 };
 
 export function can(role: HouseholdRole, capability: Capability): boolean {
   return MATRIX[capability].includes(role);
+}
+
+/** Super-user overrides, keyed `ROLE:CAPABILITY`. A missing key means "default". */
+export type PermissionOverrides = ReadonlyMap<string, boolean>;
+
+export function overrideKey(role: HouseholdRole, capability: Capability): string {
+  return `${role}:${capability}`;
+}
+
+/**
+ * `can`, adjusted by the super user's matrix overrides.
+ *
+ * Two things can never be overridden, because turning them off would strand a
+ * household: ADMIN keeps VIEW_HOUSEHOLD and MANAGE_MEMBERS.
+ */
+export function canWith(
+  role: HouseholdRole,
+  capability: Capability,
+  overrides: PermissionOverrides,
+): boolean {
+  if (
+    role === "ADMIN" &&
+    (capability === "VIEW_HOUSEHOLD" || capability === "MANAGE_MEMBERS")
+  ) {
+    return true;
+  }
+  return overrides.get(overrideKey(role, capability)) ?? can(role, capability);
 }
 
 /** Every capability a role has, for rendering UI affordances. */
@@ -77,3 +119,9 @@ const SUPER_USER_CAPABILITIES: readonly Capability[] = [
 export function superUserCan(capability: Capability): boolean {
   return SUPER_USER_CAPABILITIES.includes(capability);
 }
+
+/** Read-only capabilities: all a non-ACTIVE household still permits. */
+export const READ_ONLY_CAPABILITIES: readonly Capability[] = [
+  "VIEW_HOUSEHOLD",
+  "VIEW_AUDIT_LOGS",
+];

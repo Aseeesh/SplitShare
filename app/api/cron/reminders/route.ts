@@ -1,4 +1,5 @@
 import { isCronAuthorised } from "@/lib/cron/auth";
+import { purgeExpiredHouseholds } from "@/lib/retention/purge";
 import { generateDueRecurringExpenses } from "@/lib/recurring/generate";
 import { runReminders } from "@/lib/reminders/run";
 
@@ -16,14 +17,16 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   try {
-    const [result, recurringGenerated] = await Promise.all([
+    const [result, recurringGenerated, householdsPurged] = await Promise.all([
       runReminders(),
       generateDueRecurringExpenses(),
+      purgeExpiredHouseholds(),
     ]);
     return Response.json({
       ok: true,
       ...result,
       recurringExpensesGenerated: recurringGenerated,
+      householdsPurged,
     });
   } catch (error) {
     // Never echo the error back: this endpoint is reachable by anyone who can

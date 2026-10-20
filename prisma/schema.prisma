@@ -94,6 +94,14 @@ enum PaymentMethod {
   OTHER
 }
 
+/// ACTIVE: normal. ARCHIVED: deactivated by its admin, hidden from members and
+/// purged 30 days later. SUSPENDED: deactivated by a super user, never purged.
+enum HouseholdStatus {
+  ACTIVE
+  ARCHIVED
+  SUSPENDED
+}
+
 enum InvitationStatus {
   PENDING
   ACCEPTED
@@ -107,6 +115,12 @@ enum AuditAction {
   HOUSEHOLD_UPDATED
   USER_DISABLED
   USER_ENABLED
+  HOUSEHOLD_ARCHIVED
+  HOUSEHOLD_RESTORED
+  HOUSEHOLD_SUSPENDED
+  HOUSEHOLD_REACTIVATED
+  MEMBER_LEFT
+  MEMBER_ADDED
   MEMBER_INVITED
   INVITATION_REVOKED
   INVITATION_ACCEPTED
@@ -157,6 +171,8 @@ model User {
   isSuperUser   Boolean   @default(false) @map("is_super_user")
   /// A super user can suspend an account; it keeps its history but cannot sign in.
   disabledAt    DateTime? @map("disabled_at")
+  /// Per-admin override of the platform's households-per-admin limit.
+  maxHouseholdsOverride Int? @map("max_households_override")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -251,6 +267,10 @@ model Household {
   reminderOffsetDays Int[] @default([3, 7]) @map("reminder_offset_days")
   /// The split method pre-selected when creating a new expense in this group.
   defaultSplitMethod SplitMethod @default(EQUAL) @map("default_split_method")
+  status          HouseholdStatus @default(ACTIVE)
+  archivedAt      DateTime? @map("archived_at")
+  /// Per-household override of the platform's members-per-household limit.
+  maxMembersOverride Int? @map("max_members_override")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -268,6 +288,7 @@ model Household {
   uploads     FileUpload[]
 
   @@index([createdByUserId])
+  @@index([status, archivedAt])
   @@map("households")
 }
 
@@ -625,4 +646,30 @@ model FileUpload {
 
   @@index([householdId])
   @@map("file_uploads")
+}
+
+// ---------------------------------------------------------------------------
+// Platform configuration (super user)
+// ---------------------------------------------------------------------------
+
+/// Integer platform limits, e.g. `max_households_per_admin`. Code supplies the
+/// defaults, so an empty table is a valid configuration.
+model PlatformSetting {
+  key       String   @id
+  value     Int
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_settings")
+}
+
+/// Super-user overrides of the built-in role matrix. A missing row means "use
+/// the default"; a row forces the capability on or off for that role.
+model PermissionOverride {
+  role       HouseholdRole
+  capability String        @db.VarChar(64)
+  allowed    Boolean
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  @@id([role, capability])
+  @@map("permission_overrides")
 }

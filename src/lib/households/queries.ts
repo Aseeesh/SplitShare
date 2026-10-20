@@ -54,7 +54,7 @@ export const listHouseholds = cache(async (): Promise<HouseholdSummary[]> => {
   const user = await requireAuth();
 
   const memberships = await prisma.householdMember.findMany({
-    where: { userId: user.id, removedAt: null },
+    where: { userId: user.id, removedAt: null, household: { status: "ACTIVE" } },
     select: {
       role: true,
       household: {
@@ -201,4 +201,37 @@ export async function listPendingInvitations(
     expiresAt: invitation.expiresAt,
     invitedByName: invitation.invitedBy.name,
   }));
+}
+
+export interface ArchivedHousehold {
+  id: string;
+  name: string;
+  archivedAt: Date;
+  /** When the cron will permanently delete it. */
+  purgeAt: Date;
+}
+
+/** Households the caller administers that are inside their 30-day restore window. */
+export async function listArchivedHouseholds(): Promise<ArchivedHousehold[]> {
+  const user = await requireAuth();
+  const rows = await prisma.household.findMany({
+    where: {
+      status: "ARCHIVED",
+      members: { some: { userId: user.id, removedAt: null, role: "ADMIN" } },
+    },
+    select: { id: true, name: true, archivedAt: true },
+    orderBy: { archivedAt: "desc" },
+  });
+  return rows.flatMap((row) =>
+    row.archivedAt
+      ? [
+          {
+            id: row.id,
+            name: row.name,
+            archivedAt: row.archivedAt,
+            purgeAt: new Date(row.archivedAt.getTime() + 30 * 86_400_000),
+          },
+        ]
+      : [],
+  );
 }
