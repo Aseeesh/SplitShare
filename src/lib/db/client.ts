@@ -59,9 +59,16 @@ function createPrismaClient(): NodePrismaClient | EdgePrismaClient {
     });
   }
 
+  // A self-hosted Postgres presents a certificate no public CA signed. Pinning
+  // it as the only trusted CA keeps full verification (chain and host) rather
+  // than falling back to an unverified TLS session. Unset for Neon, whose
+  // certificate chains to a public CA.
+  const caCertificate = process.env.DATABASE_CA_CERT;
+
   return new NodePrismaClient({
     adapter: new PrismaPg({
       connectionString,
+      ...(caCertificate ? { ssl: { ca: caCertificate, rejectUnauthorized: true } } : {}),
       max: Number(process.env.DATABASE_POOL_MAX ?? 5),
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,
