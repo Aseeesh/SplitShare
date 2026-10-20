@@ -11,6 +11,7 @@ import {
   listAllHouseholds,
   listAllUsers,
   listPermissionOverrides,
+  listPlatformAudit,
 } from "@/lib/admin/queries";
 import { getPlatformLimits } from "@/lib/platform/limits";
 import { getOptionalUser } from "@/lib/auth/guards";
@@ -26,11 +27,12 @@ export default async function AdminPage() {
   if (!viewer?.isSuperUser) {
     notFound();
   }
-  const [households, users, limits, overrides] = await Promise.all([
+  const [households, users, limits, overrides, auditTrail] = await Promise.all([
     listAllHouseholds(),
     listAllUsers(),
     getPlatformLimits(),
     listPermissionOverrides(),
+    listPlatformAudit(),
   ]);
 
   return (
@@ -138,6 +140,29 @@ export default async function AdminPage() {
             </li>
           ))}
         </ul>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <h2 className="text-sm font-semibold">Recent platform changes</h2>
+        </div>
+        {auditTrail.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-slate-500">Nothing yet.</p>
+        ) : (
+          <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+            {auditTrail.map((row) => (
+              <li key={row.id} className="px-4 py-2.5">
+                <p className="text-sm font-medium">
+                  {row.action.replaceAll("_", " ").toLowerCase()}
+                </p>
+                <p className="truncate font-mono text-xs text-slate-500">{row.summary}</p>
+                <p className="text-xs text-slate-500">
+                  {row.actorName ?? "ops cli"} · {row.createdAt.toLocaleString("en-NZ")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </main>
   );

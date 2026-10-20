@@ -101,3 +101,40 @@ export async function listPermissionOverrides(): Promise<
     select: { role: true, capability: true, allowed: true },
   });
 }
+
+export interface PlatformAuditRow {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  actorName: string | null;
+  createdAt: Date;
+  summary: string;
+}
+
+export async function listPlatformAudit(limit = 20): Promise<PlatformAuditRow[]> {
+  await requireSuperUser();
+  const rows = await prisma.platformAuditLog.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      action: true,
+      entityType: true,
+      entityId: true,
+      createdAt: true,
+      beforeJson: true,
+      afterJson: true,
+      actor: { select: { name: true, email: true } },
+    },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    action: row.action,
+    entityType: row.entityType,
+    entityId: row.entityId,
+    actorName: row.actor ? (row.actor.name ?? row.actor.email) : null,
+    createdAt: row.createdAt,
+    summary: `${JSON.stringify(row.beforeJson ?? null)} → ${JSON.stringify(row.afterJson ?? null)}`,
+  }));
+}

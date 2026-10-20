@@ -202,6 +202,7 @@ model User {
   invitationsSent    Invitation[]           @relation("InvitationInvitedBy")
   invitationsClaimed Invitation[]           @relation("InvitationAcceptedBy")
   auditLogs          AuditLog[]
+  platformAudits     PlatformAuditLog[]     @relation("PlatformAuditActor")
   notifications      Notification[]
   reminders          Reminder[]
   uploads            FileUpload[]
@@ -674,4 +675,26 @@ model PermissionOverride {
 
   @@id([role, capability])
   @@map("permission_overrides")
+}
+
+/// Append-only trail for platform-level changes that belong to no single
+/// household: limits, the permission matrix, account suspension. Household-scoped
+/// changes keep using audit_logs. Protected by the same immutability trigger.
+model PlatformAuditLog {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  /// Null when the change was made by an operator through the ops CLI.
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  /// e.g. PLATFORM_LIMITS_CHANGED, PERMISSION_CHANGED, USER_DISABLED.
+  action      String   @db.VarChar(64)
+  entityType  String   @map("entity_type") @db.VarChar(64)
+  entityId    String?  @map("entity_id") @db.VarChar(64)
+  beforeJson  Json?    @map("before_json")
+  afterJson   Json?    @map("after_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  actor User? @relation("PlatformAuditActor", fields: [actorUserId], references: [id])
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@map("platform_audit_logs")
 }

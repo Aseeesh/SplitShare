@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { fail, ok, toActionResult, type ActionResult } from "@/lib/actions/result";
+import { writePlatformAudit } from "@/lib/audit/platform";
 import { writeAuditLog } from "@/lib/audit/write";
 import { requireSuperUser } from "@/lib/auth/guards";
 import { ALL_CAPABILITIES, type Capability } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/client";
+import { getPlatformLimits } from "@/lib/platform/limits";
 import { SETTING_KEYS } from "@/lib/platform/limits-core";
 
 const limit = z.number().int().min(1).max(1000);
@@ -20,20 +22,28 @@ const platformLimitsSchema = z.object({
 /** Sets the platform-wide defaults (super user only). */
 export async function setPlatformLimits(input: unknown): Promise<ActionResult<null>> {
   try {
-    await requireSuperUser();
+    const actor = await requireSuperUser();
     const data = platformLimitsSchema.parse(input);
-    await prisma.$transaction([
-      prisma.platformSetting.upsert({
+    const before = await getPlatformLimits();
+    await prisma.$transaction(async (tx) => {
+      await tx.platformSetting.upsert({
         where: { key: SETTING_KEYS.maxHouseholds },
         create: { key: SETTING_KEYS.maxHouseholds, value: data.maxHouseholdsPerAdmin },
         update: { value: data.maxHouseholdsPerAdmin },
-      }),
-      prisma.platformSetting.upsert({
+      });
+      await tx.platformSetting.upsert({
         where: { key: SETTING_KEYS.maxMembers },
         create: { key: SETTING_KEYS.maxMembers, value: data.maxMembersPerHousehold },
         update: { value: data.maxMembersPerHousehold },
-      }),
-    ]);
+      });
+      await writePlatformAudit(tx, {
+        actorUserId: actor.id,
+        action: "PLATFORM_LIMITS_CHANGED",
+        entityType: "platform_settings",
+        before,
+        after: data,
+      });
+    });
     revalidatePath("/admin");
     return ok(null);
   } catch (error) {
@@ -49,11 +59,25 @@ const userLimitSchema = z.object({
 
 export async function setUserHouseholdLimit(input: unknown): Promise<ActionResult<null>> {
   try {
-    await requireSuperUser();
+    const actor = await requireSuperUser();
     const data = userLimitSchema.parse(input);
-    await prisma.user.update({
-      where: { id: data.userId },
-      data: { maxHouseholdsOverride: data.maxHouseholds },
+    await prisma.$transaction(async (tx) => {
+      const before = await tx.user.findUniqueOrThrow({
+        where: { id: data.userId },
+        select: { maxHouseholdsOverride: true },
+      });
+      await tx.user.update({
+        where: { id: data.userId },
+        data: { maxHouseholdsOverride: data.maxHouseholds },
+      });
+      await writePlatformAudit(tx, {
+        actorUserId: actor.id,
+        action: "USER_LIMIT_CHANGED",
+        entityType: "user",
+        entityId: data.userId,
+        before: { maxHouseholds: before.maxHouseholdsOverride },
+        after: { maxHouseholds: data.maxHouseholds },
+      });
     });
     revalidatePath("/admin");
     return ok(null);
@@ -71,11 +95,25 @@ export async function setHouseholdMemberLimit(
   input: unknown,
 ): Promise<ActionResult<null>> {
   try {
-    await requireSuperUser();
+    const actor = await requireSuperUser();
     const data = householdLimitSchema.parse(input);
-    await prisma.household.update({
-      where: { id: data.householdId },
-      data: { maxMembersOverride: data.maxMembers },
+    await prisma.$transaction(async (tx) => {
+      const before = await tx.household.findUniqueOrThrow({
+        where: { id: data.householdId },
+        select: { maxMembersOverride: true },
+      });
+      await tx.household.update({
+        where: { id: data.householdId },
+        data: { maxMembersOverride: data.maxMembers },
+      });
+      await writePlatformAudit(tx, {
+        actorUserId: actor.id,
+        action: "HOUSEHOLD_LIMIT_CHANGED",
+        entityType: "household",
+        entityId: data.householdId,
+        before: { maxMembers: before.maxMembersOverride },
+        after: { maxMembers: data.maxMembers },
+      });
     });
     revalidatePath("/admin");
     return ok(null);
@@ -121,6 +159,14 @@ export async function setHouseholdSuspended(input: unknown): Promise<ActionResul
         before: { status: household.status },
         after: { status: next },
       });
+      await writePlatformAudit(tx, {
+        actorUserId: actor.id,
+        action: data.suspended ? "HOUSEHOLD_SUSPENDED" : "HOUSEHOLD_REACTIVATED",
+        entityType: "household",
+        entityId: data.householdId,
+        before: { status: household.status },
+        after: { status: next },
+      });
     });
 
     revalidatePath("/admin");
@@ -140,7 +186,7 @@ const permissionSchema = z.object({
 /** Edits one cell of the role matrix (super user only). */
 export async function setPermissionOverride(input: unknown): Promise<ActionResult<null>> {
   try {
-    await requireSuperUser();
+    const actor = await requireSuperUser();
     const data = permissionSchema.parse(input);
 
     if (
@@ -150,17 +196,31 @@ export async function setPermissionOverride(input: unknown): Promise<ActionResul
       return fail("CONFLICT", "An admin must always keep this permission.");
     }
 
-    if (data.allowed === null) {
-      await prisma.permissionOverride.deleteMany({
-        where: { role: data.role, capability: data.capability },
-      });
-    } else {
-      await prisma.permissionOverride.upsert({
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.permissionOverride.findUnique({
         where: { role_capability: { role: data.role, capability: data.capability } },
-        create: { role: data.role, capability: data.capability, allowed: data.allowed },
-        update: { allowed: data.allowed },
+        select: { allowed: true },
       });
-    }
+      if (data.allowed === null) {
+        await tx.permissionOverride.deleteMany({
+          where: { role: data.role, capability: data.capability },
+        });
+      } else {
+        await tx.permissionOverride.upsert({
+          where: { role_capability: { role: data.role, capability: data.capability } },
+          create: { role: data.role, capability: data.capability, allowed: data.allowed },
+          update: { allowed: data.allowed },
+        });
+      }
+      await writePlatformAudit(tx, {
+        actorUserId: actor.id,
+        action: "PERMISSION_CHANGED",
+        entityType: "permission",
+        entityId: `${data.role}:${data.capability}`,
+        before: { override: existing?.allowed ?? null },
+        after: { override: data.allowed },
+      });
+    });
     revalidatePath("/admin");
     return ok(null);
   } catch (error) {

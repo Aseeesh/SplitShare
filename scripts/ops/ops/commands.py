@@ -18,6 +18,15 @@ def _email(value: str) -> str:
     return value.strip().lower()
 
 
+def _audit(conn, action: str, entity_type: str, entity_id: str | None, before, after) -> None:
+    """Platform audit row for an operator change (no actor: it came from the CLI)."""
+    conn.execute(
+        "INSERT INTO platform_audit_logs (id, actor_user_id, action, entity_type, entity_id, before_json, after_json) "
+        "VALUES (gen_random_uuid(), NULL, %s, %s, %s, %s::jsonb, %s::jsonb)",
+        (action, entity_type, entity_id, json.dumps(before), json.dumps(after)),
+    )
+
+
 def status(_: argparse.Namespace) -> int:
     with db.connect() as conn:
         users = conn.execute(
@@ -52,6 +61,9 @@ def promote(args: argparse.Namespace) -> int:
             "WHERE lower(email) = %s AND NOT is_placeholder RETURNING id",
             (not args.revoke, email),
         ).fetchone()
+        if row is not None:
+            _audit(conn, "SUPERUSER_CHANGED", "user", str(row[0]),
+                   {"super_user": args.revoke}, {"super_user": not args.revoke})
     if row is None:
         print(f"error: no account for {email}. They must sign in once first.", file=sys.stderr)
         return 1
@@ -68,6 +80,8 @@ def set_limit(args: argparse.Namespace) -> int:
                 "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
                 (PLATFORM_KEYS[args.scope], value),
             )
+            _audit(conn, "PLATFORM_LIMITS_CHANGED", "platform_settings", PLATFORM_KEYS[args.scope],
+                   None, {args.scope: value})
             print(f"platform {args.scope} limit = {value}")
         elif args.scope == "user":
             row = conn.execute(
@@ -78,6 +92,7 @@ def set_limit(args: argparse.Namespace) -> int:
             if row is None:
                 print(f"error: no account for {args.target}", file=sys.stderr)
                 return 1
+            _audit(conn, "USER_LIMIT_CHANGED", "user", str(row[0]), None, {"maxHouseholds": value})
             print(f"{args.target}: household limit = {value}")
         else:
             row = conn.execute(
@@ -88,6 +103,7 @@ def set_limit(args: argparse.Namespace) -> int:
             if row is None:
                 print(f"error: no household {args.target}", file=sys.stderr)
                 return 1
+            _audit(conn, "HOUSEHOLD_LIMIT_CHANGED", "household", str(row[0]), None, {"maxMembers": value})
             print(f"household {args.target}: member limit = {value}")
     return 0
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { fail, ok, toActionResult, type ActionResult } from "@/lib/actions/result";
+import { writePlatformAudit } from "@/lib/audit/platform";
 import { writeAuditLog } from "@/lib/audit/write";
 import { requireSuperUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/client";
@@ -51,6 +52,15 @@ export async function setUserDisabled(input: unknown): Promise<ActionResult<null
       if (data.disabled) {
         await tx.session.deleteMany({ where: { userId: target.id } });
       }
+
+      await writePlatformAudit(tx, {
+        actorUserId: actor.id,
+        action: data.disabled ? "USER_DISABLED" : "USER_ENABLED",
+        entityType: "user",
+        entityId: target.id,
+        before: { disabled: !data.disabled },
+        after: { disabled: data.disabled },
+      });
 
       // §11 — audit rows are household-scoped, so record one per household
       // the user belongs to.
