@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ExpenseStatusBadge } from "@/components/ui/badge";
 import { Card, EmptyState } from "@/components/ui/card";
 import { Money } from "@/components/ui/money";
+import { SplitProgress } from "./split-progress";
 import type { ExpenseListItem } from "@/lib/expenses/queries";
 
 /** Formats the date in the household's own terms rather than an ISO string. */
@@ -42,7 +43,7 @@ export function ExpenseList({
             <li key={expense.id}>
               <Link
                 href={`/households/${householdId}/expenses/${expense.id}`}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-800/50 dark:active:bg-slate-800"
               >
                 <div
                   aria-hidden="true"
@@ -55,6 +56,11 @@ export function ExpenseList({
                     {formatDate(expense.date)} · {expense.paidByName} paid
                     {expense.hasReceipt ? " · receipt" : ""}
                   </p>
+                  <SplitProgress
+                    total={expense.participantCount}
+                    accepted={expense.acceptedCount}
+                    settled={expense.settledCount}
+                  />
                 </div>
                 <div className="shrink-0 text-right">
                   <Money

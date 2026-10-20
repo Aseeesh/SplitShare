@@ -26,7 +26,9 @@ export async function reverseExpense(
 ): Promise<ActionResult<{ reversalExpenseId: string }>> {
   try {
     const data = reverseExpenseSchema.parse(input);
-    const membership = await requireCapability(data.householdId, "CREATE_EXPENSE");
+    // Entry guard (a)-(c). Which delete right applies depends on who created
+    // the expense, so that is checked below once it has been loaded.
+    const membership = await requireCapability(data.householdId, "VIEW_HOUSEHOLD");
     const actor = await requireAuth();
 
     const expense = await prisma.expense.findUnique({
@@ -35,6 +37,7 @@ export async function reverseExpense(
         id: true,
         householdId: true,
         status: true,
+        createdByUserId: true,
         description: true,
         amountCents: true,
         currency: true,
@@ -51,6 +54,11 @@ export async function reverseExpense(
     if (!expense || expense.householdId !== data.householdId) {
       return fail("WRONG_HOUSEHOLD", "Not found");
     }
+    // "Delete" is a reversal, so it needs the delete right, not the create right.
+    await requireCapability(
+      data.householdId,
+      expense.createdByUserId === actor.id ? "DELETE_OWN_EXPENSE" : "DELETE_ANY_EXPENSE",
+    );
     if (expense.reversedBy) {
       return fail("CONFLICT", "That expense has already been reversed.");
     }

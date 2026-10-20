@@ -32,6 +32,9 @@ export interface ExpenseListItem {
   yourShareCents: number | null;
   yourAcceptance: AcceptanceStatus | null;
   participantCount: number;
+  /** Splits accepted but not yet paid, and fully settled — for the progress bar. */
+  acceptedCount: number;
+  settledCount: number;
   hasReceipt: boolean;
   isReversal: boolean;
 }
@@ -66,7 +69,9 @@ export async function listExpenses(
       reversesExpenseId: true,
       paidBy: { select: { name: true, email: true } },
       category: { select: { name: true, colorHex: true } },
-      splits: { select: { userId: true, amountCents: true, acceptance: true } },
+      splits: {
+        select: { userId: true, amountCents: true, acceptance: true, settledAt: true },
+      },
     },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take: options.limit ?? 50,
@@ -89,6 +94,10 @@ export async function listExpenses(
       yourShareCents: yours ? fromDbCents(yours.amountCents, "split amount") : null,
       yourAcceptance: yours?.acceptance ?? null,
       participantCount: expense.splits.length,
+      acceptedCount: expense.splits.filter(
+        (x) => x.acceptance === "ACCEPTED" && !x.settledAt,
+      ).length,
+      settledCount: expense.splits.filter((x) => x.settledAt).length,
       hasReceipt: expense.receiptFileId !== null,
       isReversal: expense.reversesExpenseId !== null,
     };
@@ -240,6 +249,10 @@ export async function getExpense(
     yourShareCents: yours ? fromDbCents(yours.amountCents, "split amount") : null,
     yourAcceptance: yours?.acceptance ?? null,
     participantCount: expense.splits.length,
+    acceptedCount: expense.splits.filter(
+      (x) => x.acceptance === "ACCEPTED" && !x.settledAt,
+    ).length,
+    settledCount: expense.splits.filter((x) => x.settledAt).length,
     hasReceipt: expense.receiptFileId !== null,
     isReversal: expense.reversesExpenseId !== null,
     notes: expense.notes,

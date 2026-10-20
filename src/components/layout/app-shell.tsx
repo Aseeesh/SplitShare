@@ -8,6 +8,8 @@ import { Home, Menu, ShieldCheck, User, Users, X, type LucideIcon } from "lucide
 
 import { SignOutButton } from "@/components/pwa/sign-out-button";
 
+import { GlobalTabs } from "./global-tabs";
+
 interface ShellUser {
   name: string | null;
   email: string | null;
@@ -209,7 +211,10 @@ export function AppShell({
         )}
       </AnimatePresence>
 
-      <div className="flex flex-1 flex-col">{children}</div>
+      <div className="flex flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        {children}
+      </div>
+      <GlobalTabs isSuperUser={Boolean(user.isSuperUser)} />
     </div>
   );
 }
