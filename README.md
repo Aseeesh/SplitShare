@@ -4,9 +4,9 @@ Household expense sharing on Next.js, PostgreSQL and Vercel. Built for a small
 co-habiting group rather than a general-purpose ledger: a few people, one
 household, shared bills.
 
-> **Status: in progress.** The data model and all the shared logic are in place
-> and tested. The server actions, UI and end-to-end tests are not written yet,
-> so there is no usable application to run.
+A mobile-first installable PWA. Anyone can register with Google and create a
+household, becoming its admin; admins invite people (or track someone who will
+never sign up), everyone splits expenses, and balances settle themselves.
 
 ## What makes it different from a spreadsheet
 
@@ -22,6 +22,32 @@ household, shared bills.
   own share, and the expense tracks that as a state machine.
 - **The server owns the arithmetic.** The split UI is a suggestion; every
   per-person amount is recomputed server-side from validated input.
+
+## Who can do what
+
+- **Anyone** who signs in can create households (20 each by default) and becomes
+  the admin of the ones they create. Email addresses are unique, case-insensitively.
+- **Admins** add up to 10 members per household (invite by email, or track a
+  placeholder), remove people, change roles, deactivate the household, and see
+  suggestions of people they have shared other households with.
+- **Members** create expenses, accept or reject their own share, record and
+  confirm payments, correct their own expenses, and may leave a household.
+- **Super users** (listed in `SUPERUSER_EMAILS`, or promoted with the ops CLI)
+  see and manage every household and user from `/admin`: suspend accounts and
+  households, change the limits globally or per admin/household, and edit the
+  role matrix. Every such change is written to an append-only platform audit log.
+
+A deactivated household is hidden from its members and read-only; its admin can
+restore it for 30 days, after which it is permanently deleted.
+
+## Money across expenses
+
+Each person has one net balance, and the settle-up plan uses the fewest transfers.
+Between two people, the **pairwise ledger** shows who owes whom across all
+expenses; when each owes the other, one tap proposes cancelling the overlap and
+the other person accepts. Payments are applied to the payer's oldest unpaid
+shares (recorded in `payment_allocations`), so expenses reach PAID on their own.
+Editing or deleting an expense is a reversal plus a replacement, in one transaction.
 
 ## Stack
 
@@ -53,7 +79,7 @@ since migrations must not go through a transaction pooler.
 | `pnpm dev` / `pnpm build` | Run / build the app |
 | `pnpm lint` · `pnpm typecheck` · `pnpm test` | The CI gate |
 | `pnpm test:coverage` | Enforces 100% coverage on the split engine |
-| `pnpm test:e2e` | Playwright (not written yet) |
+| `pnpm test:e2e` | Playwright at phone viewports (needs `E2E_DATABASE_URL`, a throwaway database that is wiped) |
 | `pnpm prisma:migrate` · `pnpm prisma:deploy` · `pnpm db:reset` | Schema |
 | `pnpm db:seed` | Seed a development household |
 | `pnpm format` | Prettier |
@@ -86,7 +112,35 @@ src/actions/         server actions
 src/components/      UI, grouped by feature
 prisma/              schema and migrations (the triggers are hand-written SQL)
 tests/               vitest; tests/e2e is playwright
+scripts/ops/         Python operations CLI (super users, limits, purge, smoke checks)
+scripts/deploy/      one script per hosting target
+.github/workflows/   CI, deploy, scheduled maintenance
 ```
 
 `src/lib/db/*` and `src/lib/auth/*` are `server-only`: a client component that
 imports them fails the build rather than leaking a connection string.
+
+## Operations (Python)
+
+```bash
+python -m venv scripts/ops/.venv && scripts/ops/.venv/bin/pip install -r scripts/ops/requirements.txt
+scripts/ops/.venv/bin/python scripts/ops/cli.py status
+scripts/ops/.venv/bin/python scripts/ops/cli.py promote you@example.com      # first super user
+scripts/ops/.venv/bin/python scripts/ops/cli.py purge --dry-run               # archived > 30 days
+scripts/ops/.venv/bin/python scripts/ops/cli.py backfill-allocations          # dry run; --apply to write
+```
+
+Reads `DIRECT_URL`/`DATABASE_URL` from the environment, then `.env`. Day-to-day
+management happens in the app's `/admin` console; the CLI is for bootstrap and
+for scheduled jobs that must not depend on one hosting platform.
+
+## CI/CD
+
+Every push to `main` runs the gates (lint, format, typecheck, unit and database
+tests against a real Postgres, Python tests, and the phone-viewport E2E suite),
+then applies migrations, deploys, waits until `/api/health` reports the new
+commit, and smoke-tests it. The target is chosen by the repo variable
+`DEPLOY_TARGET` (`vercel-hook` by default; `vercel` and `cloudflare` also
+exist) — see `scripts/README.md` for the one-time setup. A scheduled workflow
+runs the 30-day purge and the reminders job, so neither depends on a platform cron.
+
