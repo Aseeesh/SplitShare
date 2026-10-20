@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Home, Menu, Users, X } from "lucide-react";
+import { Home, Menu, ShieldCheck, User, Users, X, type LucideIcon } from "lucide-react";
 
 import { SignOutButton } from "@/components/pwa/sign-out-button";
 
@@ -12,12 +12,20 @@ interface ShellUser {
   name: string | null;
   email: string | null;
   image: string | null;
+  isSuperUser?: boolean;
 }
 
-const NAV = [
+const NAV: Array<{ href: string; label: string; icon: LucideIcon; exact?: boolean }> = [
   { href: "/", label: "Home", icon: Home, exact: true },
   { href: "/households", label: "Households", icon: Users },
+  { href: "/profile", label: "Profile", icon: User },
 ];
+
+const ADMIN_NAV: (typeof NAV)[number] = {
+  href: "/admin",
+  label: "Console",
+  icon: ShieldCheck,
+};
 
 function isActive(href: string, pathname: string, exact = false): boolean {
   return exact ? pathname === href : pathname.startsWith(href);
@@ -55,7 +63,8 @@ export function AppShell({
     return <div className="flex min-h-dvh flex-col">{children}</div>;
   }
 
-  const drawerNav = NAV.map(({ href, label, icon: Icon, exact }) => {
+  const navItems: typeof NAV = user.isSuperUser ? [...NAV, ADMIN_NAV] : NAV;
+  const drawerNav = navItems.map(({ href, label, icon: Icon, exact }) => {
     const active = isActive(href, pathname, exact);
     return (
       <li key={href}>
@@ -103,7 +112,7 @@ export function AppShell({
           </Link>
 
           <nav className="ml-4 hidden items-center gap-1 lg:flex" aria-label="App">
-            {NAV.map(({ href, label, exact }) => {
+            {navItems.map(({ href, label, exact }) => {
               const active = isActive(href, pathname, exact);
               return (
                 <Link

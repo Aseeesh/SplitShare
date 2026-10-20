@@ -31,7 +31,7 @@ export default async function MembersPage({
     throw error;
   }
 
-  const canManage = can(household.yourRole, "MANAGE_MEMBERS");
+  const canManage = household.viaSuperUser || can(household.yourRole, "MANAGE_MEMBERS");
   // §5 — pending invitations are admin-only data, so they are not even fetched
   // for anyone else.
   const invitations = canManage ? await listPendingInvitations(householdId) : [];

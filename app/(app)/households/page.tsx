@@ -55,8 +55,8 @@ export default async function HouseholdsPage() {
 
       {households.length === 0 ? (
         <p className="mt-6 rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-400">
-          You are not a member of any household yet. Ask someone to invite you, and the
-          link in their email will bring you back here.
+          You are not a member of any household yet. Create one above to become its admin,
+          or open the link in an invitation email to join someone else&apos;s.
         </p>
       ) : (
         <div className="mt-6 space-y-3">

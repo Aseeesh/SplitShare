@@ -66,3 +66,30 @@ describe("§5 role matrix", () => {
     expect(capabilitiesFor("ADMIN").sort()).toEqual([...ALL_CAPABILITIES].sort());
   });
 });
+
+import { superUserCan } from "@/lib/auth/permissions";
+
+describe("superUserCan", () => {
+  it("allows oversight and people management", () => {
+    for (const c of [
+      "VIEW_HOUSEHOLD",
+      "MANAGE_MEMBERS",
+      "MANAGE_SETTINGS",
+      "VIEW_AUDIT_LOGS",
+    ] as const) {
+      expect(superUserCan(c)).toBe(true);
+    }
+  });
+
+  it("never lets a non-member super user touch financial records", () => {
+    for (const c of [
+      "CREATE_EXPENSE",
+      "ACCEPT_OWN_SPLIT",
+      "RECORD_OWN_PAYMENT",
+      "CONFIRM_PAYMENT_RECEIVED",
+      "LOCK_EXPENSE",
+    ] as const) {
+      expect(superUserCan(c)).toBe(false);
+    }
+  });
+});

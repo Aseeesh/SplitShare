@@ -105,6 +105,8 @@ enum InvitationStatus {
 enum AuditAction {
   HOUSEHOLD_CREATED
   HOUSEHOLD_UPDATED
+  USER_DISABLED
+  USER_ENABLED
   MEMBER_INVITED
   INVITATION_REVOKED
   INVITATION_ACCEPTED
@@ -150,6 +152,11 @@ model User {
   /// Who manages this placeholder, and may act on its behalf. Null for real
   /// accounts. A CHECK constraint keeps the two in step.
   managedByUserId String? @map("managed_by_user_id") @db.Uuid
+  /// Platform-level operator who can see and manage every household. Promoted
+  /// from the SUPERUSER_EMAILS env var at sign-in, never through the UI.
+  isSuperUser   Boolean   @default(false) @map("is_super_user")
+  /// A super user can suspend an account; it keeps its history but cannot sign in.
+  disabledAt    DateTime? @map("disabled_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 

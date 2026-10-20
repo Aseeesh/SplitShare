@@ -14,7 +14,7 @@ import {
 } from "./errors";
 import { canActFor } from "@/lib/households/placeholders";
 
-import { can, CAPABILITY_LABELS, type Capability } from "./permissions";
+import { can, CAPABILITY_LABELS, superUserCan, type Capability } from "./permissions";
 
 /**
  * The §2.4 guard chain.
@@ -34,6 +34,7 @@ export interface AuthenticatedUser {
   name: string | null;
   email: string | null;
   image: string | null;
+  isSuperUser: boolean;
 }
 
 export interface Membership {
@@ -42,6 +43,8 @@ export interface Membership {
   role: HouseholdRole;
   /** The household's ISO 4217 currency, needed by nearly every action. */
   currency: string;
+  /** True when access comes from being a super user rather than a membership. */
+  viaSuperUser: boolean;
 }
 
 /** (a) — throws rather than redirecting, so server actions can report it. */
@@ -50,13 +53,34 @@ export const requireAuth = cache(async (): Promise<AuthenticatedUser> => {
   if (!session?.user?.id) {
     throw new UnauthenticatedError();
   }
+
+  // Read from the database, not the session, so a suspension or a revoked
+  // super-user flag takes effect on the very next request.
+  const account = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { isSuperUser: true, disabledAt: true },
+  });
+  if (!account || account.disabledAt !== null) {
+    throw new UnauthenticatedError("This account is not active");
+  }
+
   return {
     id: session.user.id,
     name: session.user.name ?? null,
     email: session.user.email ?? null,
     image: session.user.image ?? null,
+    isSuperUser: account.isSuperUser,
   };
 });
+
+/** Platform-level gate for the admin console and its actions. */
+export async function requireSuperUser(): Promise<AuthenticatedUser> {
+  const user = await requireAuth();
+  if (!user.isSuperUser) {
+    throw new InsufficientRoleError("Only a super user can do that");
+  }
+  return user;
+}
 
 /** The signed-in user, or null — for pages that render differently either way. */
 export const getOptionalUser = cache(async (): Promise<AuthenticatedUser | null> => {
@@ -83,16 +107,35 @@ export const requireHouseholdMember = cache(
 
     // A removed member is treated as a non-member: their history survives, but
     // their access does not.
-    if (!member || member.removedAt !== null) {
-      throw new NotAMemberError();
+    if (member && member.removedAt === null) {
+      return {
+        householdId,
+        userId: user.id,
+        role: member.role,
+        currency: member.household.currency,
+        viaSuperUser: false,
+      };
     }
 
-    return {
-      householdId,
-      userId: user.id,
-      role: member.role,
-      currency: member.household.currency,
-    };
+    // A super user reaches every household without belonging to it. Viewer is
+    // the floor for role-gated UI; `requireCapability` widens it.
+    if (user.isSuperUser) {
+      const household = await prisma.household.findUnique({
+        where: { id: householdId },
+        select: { currency: true },
+      });
+      if (household) {
+        return {
+          householdId,
+          userId: user.id,
+          role: "VIEWER",
+          currency: household.currency,
+          viaSuperUser: true,
+        };
+      }
+    }
+
+    throw new NotAMemberError();
   },
 );
 
@@ -102,7 +145,10 @@ export async function requireCapability(
   capability: Capability,
 ): Promise<Membership> {
   const membership = await requireHouseholdMember(householdId);
-  if (!can(membership.role, capability)) {
+  const allowed = membership.viaSuperUser
+    ? superUserCan(capability)
+    : can(membership.role, capability);
+  if (!allowed) {
     throw new InsufficientRoleError(
       `Your role in this household (${membership.role}) cannot ${CAPABILITY_LABELS[capability]}`,
     );

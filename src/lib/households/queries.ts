@@ -140,6 +140,8 @@ export interface HouseholdDetail {
   reminderOffsetDays: number[];
   defaultSplitMethod: SplitMethod;
   yourRole: HouseholdRole;
+  /** The caller can see this household only because they are a super user. */
+  viaSuperUser: boolean;
   members: MemberBalance[];
 }
 
@@ -160,7 +162,12 @@ export async function getHousehold(householdId: string): Promise<HouseholdDetail
     getMemberBalances(householdId),
   ]);
 
-  return { ...household, yourRole: membership.role, members };
+  return {
+    ...household,
+    yourRole: membership.role,
+    viaSuperUser: membership.viaSuperUser,
+    members,
+  };
 }
 
 export interface PendingInvitation {

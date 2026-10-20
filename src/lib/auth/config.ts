@@ -32,7 +32,41 @@ export const authConfig: NextAuthConfig = {
       allowDangerousEmailAccountLinking: false,
     }),
   ],
+  events: {
+    /**
+     * Promotes addresses listed in SUPERUSER_EMAILS (comma separated). This is
+     * the only way to become a super user: there is no UI or API for it, so
+     * super-user rights cannot be obtained by an in-app privilege escalation.
+     */
+    async signIn({ user }) {
+      const email = user.email?.toLowerCase();
+      if (!email || !user.id) {
+        return;
+      }
+      const configured = (process.env.SUPERUSER_EMAILS ?? "")
+        .split(",")
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+      if (configured.includes(email)) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { isSuperUser: true },
+        });
+      }
+    },
+  },
   callbacks: {
+    /** Suspended accounts cannot start a new session. */
+    async signIn({ user }) {
+      if (!user.id) {
+        return true;
+      }
+      const account = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { disabledAt: true },
+      });
+      return account?.disabledAt == null;
+    },
     /**
      * Puts the database user id on the session. Everything downstream keys off
      * `session.user.id`, never off the email, because an email can change.

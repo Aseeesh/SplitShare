@@ -58,3 +58,22 @@ export function capabilitiesFor(role: HouseholdRole): Capability[] {
 
 /** The capability list, for tests and admin screens. */
 export const ALL_CAPABILITIES = Object.keys(MATRIX) as readonly Capability[];
+
+/**
+ * What a super user may do in a household they are NOT a member of.
+ *
+ * Deliberately narrower than ADMIN: a super user sees everything and manages
+ * people and settings, but does not create, accept, pay or lock financial
+ * records on behalf of members (§2.2, §8). If they are also a real member, the
+ * membership role applies on top of this.
+ */
+const SUPER_USER_CAPABILITIES: readonly Capability[] = [
+  "VIEW_HOUSEHOLD",
+  "MANAGE_MEMBERS",
+  "MANAGE_SETTINGS",
+  "VIEW_AUDIT_LOGS",
+];
+
+export function superUserCan(capability: Capability): boolean {
+  return SUPER_USER_CAPABILITIES.includes(capability);
+}
