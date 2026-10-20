@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { connectIntegrationDatabase } from "./db";
 import { actAs } from "./session";
@@ -51,9 +51,12 @@ async function user(name: string, isSuperUser = false) {
 describeDb("organisation rules, through the actions", () => {
   beforeEach(async () => {
     await db!.reset();
-    await db!.prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "platform_audit_logs", "platform_settings", "permission_overrides" CASCADE',
-    );
+  });
+
+  // reset() also clears platform configuration, so nothing these tests change
+  // can reach another test file.
+  afterEach(async () => {
+    await db!.reset();
   });
 
   describe("limits", () => {

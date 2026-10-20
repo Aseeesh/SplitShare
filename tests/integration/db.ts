@@ -32,6 +32,11 @@ const TABLES = [
   "sessions",
   "accounts",
   "users",
+  // Platform configuration is global, so a test that changes it must not leak
+  // into the next one (or the next file).
+  "platform_settings",
+  "permission_overrides",
+  "platform_audit_logs",
 ];
 
 export interface IntegrationDatabase {

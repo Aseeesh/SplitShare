@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { connectIntegrationDatabase } from "./db";
 import { actAs } from "./session";
@@ -38,9 +38,10 @@ async function user(name: string, isSuperUser = false) {
 describeDb("platform changes", () => {
   beforeEach(async () => {
     await db!.reset();
-    await db!.prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "platform_audit_logs", "platform_settings", "permission_overrides" CASCADE',
-    );
+  });
+
+  afterEach(async () => {
+    await db!.reset();
   });
 
   it("are refused for anyone who is not a super user", async () => {
