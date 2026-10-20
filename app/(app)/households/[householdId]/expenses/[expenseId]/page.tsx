@@ -10,6 +10,7 @@ import { HouseholdNav } from "@/components/layout/household-nav";
 import { NotAMemberError } from "@/lib/auth/errors";
 import { can } from "@/lib/auth/permissions";
 import { getExpense } from "@/lib/expenses/queries";
+import { hasCapability, requireAuth } from "@/lib/auth/guards";
 import { getHousehold } from "@/lib/households/queries";
 
 export const metadata: Metadata = { title: "Expense" };
@@ -33,6 +34,13 @@ export default async function ExpensePage({
   if (!expense) {
     notFound();
   }
+
+  const viewerId = (await requireAuth()).id;
+  const own = expense.createdByUserId === viewerId;
+  const [canDelete, canEdit] = await Promise.all([
+    hasCapability(householdId, own ? "DELETE_OWN_EXPENSE" : "DELETE_ANY_EXPENSE"),
+    hasCapability(householdId, own ? "EDIT_OWN_EXPENSE" : "EDIT_ANY_EXPENSE"),
+  ]);
 
   return (
     <>
@@ -111,7 +119,8 @@ export default async function ExpensePage({
           expenseId={expense.id}
           status={expense.status}
           canLock={can(household.yourRole, "LOCK_EXPENSE")}
-          canReverse={can(household.yourRole, "CREATE_EXPENSE")}
+          canReverse={canDelete}
+          canCorrect={canEdit && can(household.yourRole, "CREATE_EXPENSE")}
         />
 
         {expense.receiptFileId ? (

@@ -181,6 +181,19 @@ export async function requireCapability(
   return membership;
 }
 
+/** Non-throwing `requireCapability`, for deciding which controls to render. */
+export async function hasCapability(
+  householdId: string,
+  capability: Capability,
+): Promise<boolean> {
+  try {
+    await requireCapability(householdId, capability);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * (d) — the entity must belong to the household the caller was authorised for.
  *

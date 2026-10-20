@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -25,12 +26,14 @@ export function ExpenseActions({
   status,
   canLock,
   canReverse,
+  canCorrect = false,
 }: {
   householdId: string;
   expenseId: string;
   status: ExpenseStatus;
   canLock: boolean;
   canReverse: boolean;
+  canCorrect?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -42,7 +45,9 @@ export function ExpenseActions({
   const lockable = canLock && status === "PAID";
   const reversible = canReverse && status !== "LOCKED" && status !== "REVERSED";
 
-  if (!lockable && !reversible) {
+  const correctable = canCorrect && status !== "LOCKED" && status !== "REVERSED";
+
+  if (!lockable && !reversible && !correctable) {
     return status === "LOCKED" ? (
       <Card className="p-4">
         <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -63,7 +68,8 @@ export function ExpenseActions({
             htmlFor="reverse-reason"
             className="block text-xs text-slate-600 dark:text-slate-400"
           >
-            Why is this being reversed? Recorded permanently against both rows.
+            Why is this being deleted? A reversing entry is recorded permanently; the
+            original stays on the record.
           </label>
           <input
             id="reverse-reason"
@@ -91,7 +97,7 @@ export function ExpenseActions({
                 });
               }}
             >
-              {isPending ? "Reversing…" : "Reverse it"}
+              {isPending ? "Deleting…" : "Delete it"}
             </Button>
             <Button
               variant="ghost"
@@ -143,9 +149,17 @@ export function ExpenseActions({
               Lock
             </Button>
           ) : null}
+          {correctable ? (
+            <Link
+              href={`/households/${householdId}/expenses/new?correct=${expenseId}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-medium hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              Edit
+            </Link>
+          ) : null}
           {reversible ? (
             <Button variant="danger" onClick={() => setConfirming("reverse")}>
-              Reverse
+              Delete
             </Button>
           ) : null}
         </div>

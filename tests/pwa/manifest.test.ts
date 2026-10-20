@@ -44,9 +44,10 @@ describe("web app manifest", () => {
     }
   });
 
-  it("starts on the household list rather than the marketing page", () => {
-    // Somebody who installed this already knows what it is.
-    expect(value.start_url).toBe("/households");
+  it("starts on the signed-in overview", () => {
+    // "/" renders the overview dashboard once signed in, and only shows the
+    // marketing page to a signed-out visitor.
+    expect(value.start_url).toBe("/");
   });
 
   it("scopes to the whole origin, so in-app links do not escape to a browser tab", () => {

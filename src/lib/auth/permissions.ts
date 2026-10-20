@@ -114,6 +114,10 @@ const SUPER_USER_CAPABILITIES: readonly Capability[] = [
   "MANAGE_MEMBERS",
   "MANAGE_SETTINGS",
   "VIEW_AUDIT_LOGS",
+  // Deleting is a reversal, never an in-place change: audited, attributed to
+  // the super user, and leaving the original row on the record. Editing is not
+  // granted: a correction creates a new expense, which needs a real member.
+  "DELETE_ANY_EXPENSE",
 ];
 
 export function superUserCan(capability: Capability): boolean {

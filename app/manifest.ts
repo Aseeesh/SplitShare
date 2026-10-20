@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
  * The web app manifest, which is what makes SplitHome installable.
  *
  * `display: standalone` so it opens without browser chrome, and `start_url`
- * points at the household list rather than the marketing page — somebody who
+ * points at the signed-in overview rather than the marketing page — somebody who
  * installed this already knows what it is.
  */
 export default function manifest(): MetadataRoute.Manifest {
@@ -12,7 +12,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "SplitHome — household expenses",
     short_name: "SplitHome",
     description: "Share household expenses without the spreadsheet.",
-    start_url: "/households",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
@@ -37,7 +37,8 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: "Add expense",
         url: "/households?action=new-expense",
       },
-      { name: "Balances", short_name: "Balances", url: "/households" },
+      { name: "Overview", short_name: "Overview", url: "/" },
+      { name: "Your groups", short_name: "Groups", url: "/households" },
     ],
   };
 }

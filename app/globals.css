@@ -49,3 +49,31 @@ body {
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* Native-app touch behaviour: no 300ms tap delay or double-tap zoom on
+   controls, no text-selection flash or long-press callout on chrome. Body
+   text stays selectable, so amounts can still be copied. */
+a,
+button,
+[role="tab"],
+[role="switch"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+nav,
+header,
+button {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

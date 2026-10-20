@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { createExpense } from "@/actions/expenses/create";
+import { reverseExpense } from "@/actions/expenses/reverse";
 import { uploadReceiptAction } from "@/actions/expenses/upload-receipt";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +16,19 @@ export interface FormMember {
   userId: string;
   name: string;
   isPlaceholder: boolean;
+}
+
+/** Starting values when correcting an existing expense. */
+export interface CorrectionSeed {
+  expenseId: string;
+  description: string;
+  amountText: string;
+  date: string;
+  categoryId: string;
+  paidByUserId: string;
+  method: SplitMethod;
+  selected: string[];
+  weights: Record<string, string>;
 }
 
 export interface FormCategory {
@@ -44,6 +58,7 @@ export function ExpenseForm({
   categories,
   viewerUserId,
   defaultMethod = "EQUAL",
+  correcting,
 }: {
   householdId: string;
   currency: string;
@@ -51,21 +66,30 @@ export function ExpenseForm({
   categories: FormCategory[];
   viewerUserId: string;
   defaultMethod?: SplitMethod;
+  correcting?: CorrectionSeed;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const [description, setDescription] = useState("");
-  const [amountText, setAmountText] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [categoryId, setCategoryId] = useState<string>("");
-  const [paidByUserId, setPaidByUserId] = useState(viewerUserId);
+  const [description, setDescription] = useState(correcting?.description ?? "");
+  const [amountText, setAmountText] = useState(correcting?.amountText ?? "");
+  const [date, setDate] = useState(
+    () => correcting?.date ?? new Date().toISOString().slice(0, 10),
+  );
+  const [categoryId, setCategoryId] = useState<string>(correcting?.categoryId ?? "");
+  const [paidByUserId, setPaidByUserId] = useState(
+    correcting?.paidByUserId ?? viewerUserId,
+  );
   const [additionalFunders, setAdditionalFunders] = useState<
     Array<{ userId: string; amountText: string }>
   >([]);
-  const [method, setMethod] = useState<SplitMethod>(defaultMethod);
-  const [selected, setSelected] = useState<string[]>(() => members.map((m) => m.userId));
-  const [weights, setWeights] = useState<Record<string, string>>({});
+  const [method, setMethod] = useState<SplitMethod>(correcting?.method ?? defaultMethod);
+  const [selected, setSelected] = useState<string[]>(
+    () => correcting?.selected ?? members.map((m) => m.userId),
+  );
+  const [weights, setWeights] = useState<Record<string, string>>(
+    correcting?.weights ?? {},
+  );
   const [receipt, setReceipt] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -208,6 +232,23 @@ export function ExpenseForm({
         setError(result.message);
         setFieldErrors(result.fieldErrors ?? {});
         return;
+      }
+
+      // A correction is a new expense plus a reversal of the old one. The new
+      // one is saved first, so a failure here can only ever leave a duplicate
+      // (visible, and removable) rather than losing the record.
+      if (correcting) {
+        const reversal = await reverseExpense({
+          householdId,
+          expenseId: correcting.expenseId,
+          reason: "Corrected",
+        });
+        if (!reversal.ok) {
+          setError(
+            `The corrected expense was saved, but the original could not be replaced: ${reversal.message}`,
+          );
+          return;
+        }
       }
       router.push(`/households/${householdId}`);
       router.refresh();

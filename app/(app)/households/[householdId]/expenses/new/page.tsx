@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { ExpenseForm } from "@/components/expenses/expense-form";
+import { ExpenseForm, type CorrectionSeed } from "@/components/expenses/expense-form";
 import { AppHeader } from "@/components/layout/app-header";
 import { HouseholdNav } from "@/components/layout/household-nav";
 import { InsufficientRoleError, NotAMemberError } from "@/lib/auth/errors";
 import { requireAuth, requireCapability } from "@/lib/auth/guards";
+import { getExpense } from "@/lib/expenses/queries";
+import { toMoneyInput } from "@/lib/money";
 import { prisma } from "@/lib/db/client";
 import { getHousehold } from "@/lib/households/queries";
 
@@ -13,8 +15,10 @@ export const metadata: Metadata = { title: "Add an expense" };
 
 export default async function NewExpensePage({
   params,
+  searchParams,
 }: PageProps<"/households/[householdId]/expenses/new">) {
   const { householdId } = await params;
+  const { correct } = await searchParams;
   const viewer = await requireAuth();
 
   try {
@@ -37,17 +41,57 @@ export default async function NewExpensePage({
     }),
   ]);
 
+  // "Edit" is a correction: pre-fill from the original, which is reversed once
+  // the replacement is saved. Needs the edit right for that specific expense.
+  let seed: CorrectionSeed | undefined;
+  if (typeof correct === "string") {
+    const original = await getExpense(householdId, correct);
+    if (!original || original.status === "LOCKED" || original.status === "REVERSED") {
+      notFound();
+    }
+    try {
+      await requireCapability(
+        householdId,
+        original.createdByUserId === viewer.id ? "EDIT_OWN_EXPENSE" : "EDIT_ANY_EXPENSE",
+      );
+    } catch {
+      notFound();
+    }
+    const exact = original.splitMethod !== "EQUAL";
+    seed = {
+      expenseId: original.id,
+      description: original.description,
+      amountText: toMoneyInput(original.amountCents, original.currency),
+      date: original.date.toISOString().slice(0, 10),
+      categoryId: original.categoryId ?? "",
+      paidByUserId: original.paidByUserId,
+      method: exact ? "EXACT" : "EQUAL",
+      selected: original.splits.map((split) => split.userId),
+      weights: exact
+        ? Object.fromEntries(
+            original.splits.map((split) => [
+              split.userId,
+              toMoneyInput(split.amountCents, original.currency),
+            ]),
+          )
+        : {},
+    };
+  }
+
   return (
     <>
       <AppHeader householdName={household.name} role={household.yourRole} />
       <main className="mx-auto w-full max-w-2xl flex-1 p-4 pb-24">
-        <h1 className="mb-4 text-xl font-semibold tracking-tight">Add an expense</h1>
+        <h1 className="mb-4 text-xl font-semibold tracking-tight">
+          {seed ? "Correct expense" : "Add an expense"}
+        </h1>
         <ExpenseForm
           householdId={householdId}
           currency={household.currency}
           viewerUserId={viewer.id}
           defaultMethod={household.defaultSplitMethod}
           categories={categories}
+          correcting={seed}
           members={household.members.map((member) => ({
             userId: member.userId,
             name: member.name ?? member.email,

@@ -179,6 +179,8 @@ export interface ExpenseDetail extends ExpenseListItem {
   notes: string | null;
   receiptFileId: string | null;
   createdByName: string;
+  createdByUserId: string;
+  categoryId: string | null;
   splits: Array<{
     userId: string;
     name: string;
@@ -209,6 +211,8 @@ export async function getExpense(
       notes: true,
       receiptFileId: true,
       paidByUserId: true,
+      createdByUserId: true,
+      categoryId: true,
       reversesExpenseId: true,
       paidBy: { select: { name: true, email: true } },
       createdBy: { select: { name: true, email: true } },
@@ -244,6 +248,8 @@ export async function getExpense(
     paidByUserId: expense.paidByUserId,
     paidByName: expense.paidBy.name ?? expense.paidBy.email,
     createdByName: expense.createdBy.name ?? expense.createdBy.email,
+    createdByUserId: expense.createdByUserId,
+    categoryId: expense.categoryId,
     categoryName: expense.category?.name ?? null,
     categoryColorHex: expense.category?.colorHex ?? null,
     yourShareCents: yours ? fromDbCents(yours.amountCents, "split amount") : null,
