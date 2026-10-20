@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -52,7 +53,12 @@ export function MemberRow({
   }
 
   return (
-    <li className="px-4 py-3">
+    <motion.li
+      layout
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="px-4 py-3"
+    >
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">
@@ -141,6 +147,6 @@ export function MemberRow({
           {error}
         </p>
       ) : null}
-    </li>
+    </motion.li>
   );
 }

@@ -62,3 +62,6 @@ logfile
 .wrangler/
 .dev.vars
 .receipts/
+
+scripts/ops/.venv/
+__pycache__/

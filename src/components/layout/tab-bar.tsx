@@ -41,6 +41,14 @@ export function TabBar({
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
+                onClick={() => {
+                  // A light tick where supported (Android; iOS ignores it).
+                  try {
+                    navigator.vibrate?.(8);
+                  } catch {
+                    /* haptics are a nicety */
+                  }
+                }}
                 className="relative flex min-h-14 flex-col items-center justify-center gap-0.5 select-none"
               >
                 {active ? (

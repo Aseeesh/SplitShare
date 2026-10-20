@@ -10,6 +10,8 @@ import { HouseholdNav } from "@/components/layout/household-nav";
 import { BalanceSummary, SettleUpPlan } from "@/components/dashboard/balance-summary";
 import { DefaultSplitSetting } from "@/components/households/default-split-setting";
 import { Card, CardHeader } from "@/components/ui/card";
+import { Fab } from "@/components/ui/fab";
+import { can } from "@/lib/auth/permissions";
 import { NotAMemberError } from "@/lib/auth/errors";
 import { requireAuth } from "@/lib/auth/guards";
 import { getMonthlySpending, getSpendingByCategory } from "@/lib/expenses/analytics";
@@ -101,6 +103,9 @@ export default async function HouseholdPage({
 
         <ExpenseList householdId={householdId} expenses={expenses} />
       </main>
+      {can(household.yourRole, "CREATE_EXPENSE") && !household.viaSuperUser ? (
+        <Fab href={`/households/${householdId}/expenses/new`} label="Add an expense" />
+      ) : null}
       <HouseholdNav householdId={householdId} />
     </>
   );

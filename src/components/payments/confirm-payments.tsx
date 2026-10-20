@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -47,7 +48,13 @@ export function ConfirmPayments({
       ) : (
         <ul className="divide-y divide-slate-200 dark:divide-slate-800">
           {payments.map((payment) => (
-            <li key={payment.id} className="px-4 py-3">
+            <motion.li
+              key={payment.id}
+              layout
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="px-4 py-3"
+            >
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm">
@@ -88,7 +95,7 @@ export function ConfirmPayments({
               >
                 {isPending ? "Confirming…" : "Yes, it arrived"}
               </Button>
-            </li>
+            </motion.li>
           ))}
         </ul>
       )}

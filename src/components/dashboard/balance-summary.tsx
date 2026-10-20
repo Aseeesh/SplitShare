@@ -1,3 +1,4 @@
+import { AnimatedMoney } from "@/components/ui/animated-money";
 import { Balance } from "@/components/ui/money";
 import { Card } from "@/components/ui/card";
 import type { MemberBalance } from "@/lib/households/queries";
@@ -32,9 +33,11 @@ export function BalanceSummary({
       <p className="text-sm text-slate-500 dark:text-slate-400">
         {yourNet > 0 ? "You are owed" : yourNet < 0 ? "You owe" : "You are settled up"}
       </p>
-      <p className="mt-1 font-mono text-3xl font-semibold tabular-nums">
-        {formatMoney(Math.abs(yourNet), currency)}
-      </p>
+      <AnimatedMoney
+        cents={Math.abs(yourNet)}
+        currency={currency}
+        className="mt-1 block text-3xl font-semibold"
+      />
 
       {members.length > 1 ? (
         <ul className="mt-5 space-y-2 border-t border-slate-200 pt-4 dark:border-slate-800">
