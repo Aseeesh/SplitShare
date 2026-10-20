@@ -3,7 +3,7 @@
 ## §1 Mission
 
 Production-quality household expense-sharing app on Next.js (App Router) + PostgreSQL
-(Neon in production) + Vercel. Monolithic, modular, server-first. Modeled on SplitPro
+(self-hosted in production) + Vercel. Monolithic, modular, server-first. Modeled on SplitPro
 (`oss-apps/split-pro`) but optimized for a small co-habiting group.
 
 ## §2 Non-negotiable rules
@@ -335,7 +335,6 @@ Provider-agnostic on purpose: swapping host or database must be config, not code
 | App | Vercel (`clean-nz/splitshare`), functions pinned to `sin1` in `vercel.json` | Node runtime, `PrismaPg` driver; `DATABASE_DRIVER` unset |
 | Database | **Self-hosted Postgres 16**, Docker container `splitshare-postgres` on a shared Jakarta VPS, port 5434 | Own volume `splitshare-pgdata`; certs in `/opt/splitshare-pg`. The same server runs another project's containers and nginx — **never touch them**, never enable ufw or edit nginx |
 | TLS | Self-signed cert, pinned via `DATABASE_CA_CERT`; `rejectUnauthorized: true` | Never use `sslmode=no-verify`. CI writes the cert to a file and appends `sslmode=verify-full&sslrootcert=` to `DIRECT_URL` |
-| Neon | Former database, kept as rollback only | Point `DATABASE_URL`/`DIRECT_URL` back and unset `DATABASE_CA_CERT` |
 | CI/CD | `ci.yml` → `deploy.yml` | gates → migrate → `scripts/deploy/deploy.sh $DEPLOY_TARGET` → wait for `/api/health` sha → smoke. Targets: `vercel-hook` (default), `vercel`, `cloudflare` |
 | Scheduled jobs | `maintenance.yml` | hourly, Python ops CLI |
 | Ops | `scripts/ops/cli.py` | status, promote, set-limit, purge, backfill-allocations, run-cron, wait, smoke; writes platform audit rows |

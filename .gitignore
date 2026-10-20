@@ -65,3 +65,4 @@ logfile
 
 scripts/ops/.venv/
 __pycache__/
+.certs/

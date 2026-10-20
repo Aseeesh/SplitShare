@@ -52,7 +52,7 @@ Editing or deleting an expense is a reversal plus a replacement, in one transact
 ## Stack
 
 Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS 4 ·
-Prisma 7 with the `pg` driver adapter · PostgreSQL 16 (self-hosted in production; Neon-compatible) ·
+Prisma 7 with the `pg` driver adapter · PostgreSQL 16 (self-hosted in production) ·
 Auth.js v5 · Zod 4 · Vitest · Playwright
 
 ## Architecture
