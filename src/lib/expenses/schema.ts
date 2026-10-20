@@ -51,9 +51,19 @@ export const participantSchema = z.object({
 
 export type ParticipantInput = z.infer<typeof participantSchema>;
 
+/** A person who contributed money toward the expense (§ multi-payer). */
+export const funderSchema = z.object({
+  userId: z.uuid(),
+  amountCents: centsSchema.positive({
+    error: "A contribution must be greater than zero",
+  }),
+});
+
 const baseCreateExpenseSchema = z.object({
   householdId: z.uuid(),
   paidByUserId: z.uuid(),
+  /** Optional list of contributors. Defaults to the single payer for the full amount. */
+  funders: z.array(funderSchema).min(1).max(50).optional(),
   categoryId: z.uuid().nullable(),
   description: z
     .string()

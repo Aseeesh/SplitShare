@@ -31,6 +31,16 @@ export async function createExpense(
 ): Promise<ActionResult<{ expenseId: string; status: string }>> {
   try {
     const data = createExpenseSchema.parse(input);
+    const funders = data.funders ?? [
+      { userId: data.paidByUserId, amountCents: data.amountCents },
+    ];
+    if (
+      funders.reduce((sum, funder) => sum + funder.amountCents, 0) !== data.amountCents
+    ) {
+      return fail("VALIDATION", "The contributions must add up to the expense total.", {
+        fieldErrors: { funders: ["Sum of contributions must equal the total"] },
+      });
+    }
     const membership = await requireCapability(data.householdId, "CREATE_EXPENSE");
     consumeRateLimit("CREATE_EXPENSE", membership.userId);
 
@@ -50,11 +60,12 @@ export async function createExpense(
     // and checked against the participant list, so a participant from another
     // household cannot be slipped in alongside this household's id.
     const participantIds = data.participants.map((participant) => participant.userId);
+    const funderUserIds = new Set(funders.map((funder) => funder.userId));
     const members = await prisma.householdMember.findMany({
       where: {
         householdId: data.householdId,
         removedAt: null,
-        userId: { in: [...new Set([...participantIds, data.paidByUserId])] },
+        userId: { in: [...new Set([...participantIds, ...funderUserIds])] },
       },
       select: {
         userId: true,
@@ -71,8 +82,12 @@ export async function createExpense(
         "One of those people is not a member of this household.",
       );
     }
-    if (!memberById.has(data.paidByUserId)) {
-      return fail("WRONG_HOUSEHOLD", "Whoever paid must be a member of this household.");
+    const strangerFunder = funders.find((funder) => !memberById.has(funder.userId));
+    if (strangerFunder !== undefined) {
+      return fail(
+        "WRONG_HOUSEHOLD",
+        "One of the contributors is not a member of this household.",
+      );
     }
 
     if (data.categoryId !== null) {
@@ -107,7 +122,7 @@ export async function createExpense(
       const participant = memberById.get(split.userId)!;
       const accepted = splitStartsAccepted({
         participantUserId: split.userId,
-        paidByUserId: data.paidByUserId,
+        funderUserIds,
         createdByUserId: membership.userId,
         isPlaceholder: participant.isPlaceholder,
       });
@@ -162,7 +177,13 @@ export async function createExpense(
               // nobody for them to pay. Without this an expense can never reach
               // PAID, because their split would sit unsettled forever and
               // `allSplitsSettled` would never be true.
-              settledAt: split.userId === data.paidByUserId ? now : null,
+              settledAt: funderUserIds.has(split.userId) ? now : null,
+            })),
+          },
+          funders: {
+            create: funders.map((funder) => ({
+              userId: funder.userId,
+              amountCents: toDbCents(funder.amountCents, "funder amount"),
             })),
           },
         },

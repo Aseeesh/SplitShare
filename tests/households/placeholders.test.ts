@@ -86,7 +86,7 @@ describe("canActFor", () => {
 });
 
 describe("splitStartsAccepted", () => {
-  const base = { paidByUserId: ANN, createdByUserId: ANN };
+  const base = { funderUserIds: new Set([ANN]), createdByUserId: ANN };
 
   it("accepts a placeholder's split immediately — nobody can accept for them", () => {
     expect(
@@ -104,8 +104,19 @@ describe("splitStartsAccepted", () => {
     expect(
       splitStartsAccepted({
         participantUserId: BOB,
-        paidByUserId: ANN,
+        funderUserIds: new Set([ANN]),
         createdByUserId: BOB,
+        isPlaceholder: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("accepts any funder's split, not just the primary payer", () => {
+    expect(
+      splitStartsAccepted({
+        participantUserId: BOB,
+        funderUserIds: new Set([ANN, BOB]),
+        createdByUserId: ANN,
         isPlaceholder: false,
       }),
     ).toBe(true);

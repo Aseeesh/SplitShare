@@ -63,7 +63,7 @@ export async function generateDueRecurringExpenses(now = new Date()): Promise<nu
       ...split,
       accepted: splitStartsAccepted({
         participantUserId: split.userId,
-        paidByUserId: recurring.paidByUserId,
+        funderUserIds: new Set([recurring.paidByUserId]),
         createdByUserId: recurring.createdByUserId,
         isPlaceholder: isPlaceholderById.get(split.userId) ?? false,
       }),
@@ -94,6 +94,11 @@ export async function generateDueRecurringExpenses(now = new Date()): Promise<nu
               acceptance: split.accepted ? "ACCEPTED" : "PENDING",
               acceptedAt: split.accepted ? new Date() : null,
             })),
+          },
+          funders: {
+            create: [
+              { userId: recurring.paidByUserId, amountCents: recurring.amountCents },
+            ],
           },
         },
       });

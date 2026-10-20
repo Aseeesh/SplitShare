@@ -60,6 +60,9 @@ export function ExpenseForm({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [categoryId, setCategoryId] = useState<string>("");
   const [paidByUserId, setPaidByUserId] = useState(viewerUserId);
+  const [additionalFunders, setAdditionalFunders] = useState<
+    Array<{ userId: string; amountText: string }>
+  >([]);
   const [method, setMethod] = useState<SplitMethod>(defaultMethod);
   const [selected, setSelected] = useState<string[]>(() => members.map((m) => m.userId));
   const [weights, setWeights] = useState<Record<string, string>>({});
@@ -159,6 +162,34 @@ export function ExpenseForm({
         receiptFileId = upload.data.fileId;
       }
 
+      let funders: Array<{ userId: string; amountCents: number }> | undefined;
+      if (additionalFunders.length > 0) {
+        const additional = additionalFunders.map((funder) => ({
+          userId: funder.userId,
+          amountCents: parseMoneyInput(funder.amountText, currency),
+        }));
+        if (additional.some((funder) => funder.amountCents === null)) {
+          setError("Enter a valid amount for every contributor.");
+          return;
+        }
+        const additionalTotal = additional.reduce(
+          (sum, funder) => sum + (funder.amountCents ?? 0),
+          0,
+        );
+        const primaryAmount = amountCents - additionalTotal;
+        if (primaryAmount < 0) {
+          setError("Contributions exceed the expense total.");
+          return;
+        }
+        funders = [
+          { userId: paidByUserId, amountCents: primaryAmount },
+          ...additional.map((funder) => ({
+            userId: funder.userId,
+            amountCents: funder.amountCents!,
+          })),
+        ];
+      }
+
       const result = await createExpense({
         householdId,
         paidByUserId,
@@ -170,6 +201,7 @@ export function ExpenseForm({
         splitMethod: method,
         participants,
         receiptFileId,
+        funders,
       });
 
       if (!result.ok) {
@@ -270,6 +302,67 @@ export function ExpenseForm({
             ))}
           </select>
         </Field>
+
+        {additionalFunders.map((funder, index) => (
+          <div key={index} className="flex gap-2">
+            <select
+              value={funder.userId}
+              onChange={(event) =>
+                setAdditionalFunders((prev) =>
+                  prev.map((f, i) =>
+                    i === index ? { ...f, userId: event.target.value } : f,
+                  ),
+                )
+              }
+              className={inputClass}
+            >
+              {members.map((member) => (
+                <option key={member.userId} value={member.userId}>
+                  {member.userId === viewerUserId ? "You" : member.name}
+                </option>
+              ))}
+            </select>
+            <input
+              value={funder.amountText}
+              onChange={(event) =>
+                setAdditionalFunders((prev) =>
+                  prev.map((f, i) =>
+                    i === index ? { ...f, amountText: event.target.value } : f,
+                  ),
+                )
+              }
+              inputMode="decimal"
+              placeholder="0.00"
+              className={`${inputClass} w-28 font-mono tabular-nums`}
+            />
+            <button
+              type="button"
+              aria-label="Remove contributor"
+              onClick={() =>
+                setAdditionalFunders((prev) => prev.filter((_, i) => i !== index))
+              }
+              className="flex min-h-11 shrink-0 items-center px-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={() =>
+            setAdditionalFunders((prev) => [
+              ...prev,
+              { userId: viewerUserId, amountText: "" },
+            ])
+          }
+          className="text-brand-strong hover:text-brand text-sm font-medium"
+        >
+          + Add contributor
+        </button>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          The person listed above covers the remainder of the total.
+        </p>
       </Card>
 
       <Card className="space-y-4 p-4">

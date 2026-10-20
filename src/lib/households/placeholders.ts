@@ -57,7 +57,7 @@ export function canActFor(actorUserId: string, subject: ActorSubject): boolean {
  */
 export function splitStartsAccepted(options: {
   participantUserId: string;
-  paidByUserId: string;
+  funderUserIds: ReadonlySet<string>;
   createdByUserId: string;
   isPlaceholder: boolean;
 }): boolean {
@@ -65,7 +65,7 @@ export function splitStartsAccepted(options: {
     return true;
   }
   return (
-    options.participantUserId === options.paidByUserId ||
+    options.funderUserIds.has(options.participantUserId) ||
     options.participantUserId === options.createdByUserId
   );
 }

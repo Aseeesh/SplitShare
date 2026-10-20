@@ -170,6 +170,7 @@ model User {
   recurringExpensesPaid    RecurringExpense[] @relation("RecurringExpensePaidBy")
   expensesLocked     Expense[]              @relation("ExpenseLockedBy")
   splits             ExpenseSplit[]
+  fundedExpenses     ExpenseFunder[]        @relation("ExpenseFunder")
   paymentsSent       Payment[]              @relation("PaymentFrom")
   paymentsReceived   Payment[]              @relation("PaymentTo")
   paymentsConfirmed  PaymentConfirmation[]
@@ -357,11 +358,31 @@ model Expense {
   reversesExpense Expense?      @relation("ExpenseReversal", fields: [reversesExpenseId], references: [id])
   reversedBy      Expense?      @relation("ExpenseReversal")
   splits          ExpenseSplit[]
+  funders         ExpenseFunder[]
 
   @@index([householdId, date])
   @@index([householdId, status])
   @@index([paidByUserId])
   @@map("expenses")
+}
+
+// ---------------------------------------------------------------------------
+// Expense funders — an expense may be funded by more than one person.
+// SUM(amount_cents) per expense == expenses.amount_cents, asserted at COMMIT.
+// ---------------------------------------------------------------------------
+
+model ExpenseFunder {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  expenseId   String  @map("expense_id") @db.Uuid
+  userId      String  @map("user_id") @db.Uuid
+  amountCents BigInt  @map("amount_cents")
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation("ExpenseFunder", fields: [userId], references: [id])
+
+  @@unique([expenseId, userId])
+  @@index([userId])
+  @@map("expense_funders")
 }
 
 // ---------------------------------------------------------------------------
