@@ -8,7 +8,7 @@ import { writeAuditLog } from "@/lib/audit/write";
 import { requireAuth, requireCanActFor, requireCapability } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/client";
 import { loadDebtMatrix } from "@/lib/ledger/load";
-import { parseOffsetReference } from "@/lib/ledger/queries";
+import { offsetProposalCutoff, parseOffsetReference } from "@/lib/ledger/queries";
 import { toDbCents, fromDbCents } from "@/lib/money";
 import { createNotifications } from "@/lib/notifications/create";
 
@@ -78,6 +78,8 @@ export async function proposeOffset(
         householdId: data.householdId,
         method: "OFFSET",
         confirmation: { is: null },
+        // An expired proposal no longer blocks a fresh one.
+        paidAt: { gt: offsetProposalCutoff() },
         OR: [
           { fromUserId: membership.userId, toUserId: data.withUserId },
           { fromUserId: data.withUserId, toUserId: membership.userId },
@@ -186,6 +188,7 @@ export async function confirmOffset(input: unknown): Promise<ActionResult<null>>
         fromUserId: true,
         toUserId: true,
         amountCents: true,
+        paidAt: true,
         confirmation: { select: { id: true } },
       },
     });
@@ -196,6 +199,10 @@ export async function confirmOffset(input: unknown): Promise<ActionResult<null>>
     }
     if (legs.some((leg) => leg.confirmation)) {
       return fail("CONFLICT", "That cancel-out has already been confirmed.");
+    }
+
+    if (legs.some((leg) => leg.paidAt <= offsetProposalCutoff())) {
+      return fail("CONFLICT", "That cancel-out expired. Propose it again.");
     }
 
     const counterparty = legs.find(

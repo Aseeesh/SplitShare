@@ -27,6 +27,13 @@ export interface PairLedger {
   proposalsForYou: OffsetProposal[];
 }
 
+/** A cancel-out nobody accepts within this long stops counting and can be re-proposed. */
+export const OFFSET_PROPOSAL_TTL_DAYS = 7;
+
+export function offsetProposalCutoff(now = new Date()): Date {
+  return new Date(now.getTime() - OFFSET_PROPOSAL_TTL_DAYS * 86_400_000);
+}
+
 /** Offset references look like `offset:<groupId>:<proposerUserId>`. */
 export function parseOffsetReference(
   reference: string | null,

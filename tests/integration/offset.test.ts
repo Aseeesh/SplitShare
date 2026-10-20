@@ -165,4 +165,72 @@ describeDb("cancelling out what members owe each other", () => {
       false,
     );
   });
+
+  it("lets an unanswered proposal expire so a new one can be made", async () => {
+    const { prisma } = db!;
+    const [a, b] = await Promise.all(["Ann", "Bob"].map(user));
+    actAs(a!);
+    const { householdId } = expectOk(
+      await createHousehold({ name: "Flat", currency: "NZD" }),
+    );
+    await prisma.householdMember.create({
+      data: { householdId, userId: b!.id, role: "MEMBER" },
+    });
+
+    const date = new Date("2026-10-07T00:00:00.000Z");
+    const accept = async (
+      who: { id: string; name: string; email: string },
+      id: string,
+    ) => {
+      actAs(who);
+      expectOk(
+        await respondToSplit({ householdId, expenseId: id, decision: "ACCEPTED" }),
+      );
+    };
+    const spend = async (payer: typeof a, cents: number, description: string) => {
+      actAs(payer!);
+      const e = expectOk(
+        await createExpense({
+          householdId,
+          paidByUserId: payer!.id,
+          categoryId: null,
+          description,
+          amountCents: cents,
+          currency: "NZD",
+          date,
+          splitMethod: "EQUAL",
+          participants: [a, b].map((u) => ({ userId: u!.id })),
+        }),
+      );
+      await accept(payer === a ? b! : a!, e.expenseId);
+    };
+    await spend(a, 10000, "Dinner");
+    await spend(b, 6000, "Groceries");
+
+    // An 8-day-old proposal, written the way proposeOffset would have.
+    const old = new Date(Date.now() - 8 * 86_400_000);
+    const reference = `offset:${crypto.randomUUID()}:${a!.id}`;
+    for (const [from, to] of [
+      [a!.id, b!.id],
+      [b!.id, a!.id],
+    ] as const) {
+      await prisma.payment.create({
+        data: {
+          householdId,
+          fromUserId: from,
+          toUserId: to,
+          amountCents: 3000n,
+          currency: "NZD",
+          method: "OFFSET",
+          reference,
+          paidAt: old,
+        },
+      });
+    }
+
+    actAs(b!);
+    expect((await confirmOffset({ householdId, reference })).ok).toBe(false);
+    actAs(a!);
+    expect((await proposeOffset({ householdId, withUserId: b!.id })).ok).toBe(true);
+  });
 });
