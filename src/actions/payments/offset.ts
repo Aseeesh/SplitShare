@@ -11,6 +11,7 @@ import { loadDebtMatrix } from "@/lib/ledger/load";
 import { offsetProposalCutoff, parseOffsetReference } from "@/lib/ledger/queries";
 import { toDbCents, fromDbCents } from "@/lib/money";
 import { createNotifications } from "@/lib/notifications/create";
+import { allocateConfirmedPayment } from "@/lib/payments/allocate";
 
 const proposeSchema = z.object({ householdId: z.uuid(), withUserId: z.uuid() });
 const confirmSchema = z.object({ householdId: z.uuid(), reference: z.string().min(1) });
@@ -185,6 +186,7 @@ export async function confirmOffset(input: unknown): Promise<ActionResult<null>>
       },
       select: {
         id: true,
+        householdId: true,
         fromUserId: true,
         toUserId: true,
         amountCents: true,
@@ -240,6 +242,9 @@ export async function confirmOffset(input: unknown): Promise<ActionResult<null>>
           entityId: leg.id,
           after: { method: "OFFSET", amountCents: amount, reference: data.reference },
         });
+        // Each leg pays down the payer's oldest shares owed to the other person,
+        // so a cancelled-out debt also settles the expenses behind it.
+        await allocateConfirmedPayment(tx, leg, now);
       }
     });
 

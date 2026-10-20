@@ -10,6 +10,7 @@ import { sendPaymentConfirmedEmail } from "@/lib/email/send";
 import { confirmPaymentSchema } from "@/lib/expenses/schema";
 import { statusAfterPaymentConfirmed } from "@/lib/expenses/state";
 import { fromDbCents } from "@/lib/money";
+import { allocateConfirmedPayment } from "@/lib/payments/allocate";
 import { createNotifications } from "@/lib/notifications/create";
 
 /**
@@ -134,6 +135,19 @@ export async function confirmPayment(
           });
         }
         nextStatus = target;
+      } else {
+        // No share named: settle the payer's oldest shares owed to the recipient.
+        await allocateConfirmedPayment(
+          tx,
+          {
+            id: payment.id,
+            householdId: data.householdId,
+            fromUserId: payment.fromUserId,
+            toUserId: payment.toUserId,
+            amountCents: payment.amountCents,
+          },
+          now,
+        );
       }
 
       await writeAuditLog(tx, {

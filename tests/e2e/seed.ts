@@ -94,6 +94,22 @@ export async function seed(connectionString: string): Promise<void> {
       },
     });
 
+    // A clean two-person household for the §40 acceptance scenario, which
+    // mutates it, so nothing else reads from it.
+    await prisma.household.create({
+      data: {
+        name: "Acceptance flat",
+        currency: "NZD",
+        createdByUserId: ann.id,
+        members: {
+          create: [
+            { userId: ann.id, role: "ADMIN" },
+            { userId: bob.id, role: "MEMBER" },
+          ],
+        },
+      },
+    });
+
     const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000);
 
     async function expense(opts: {

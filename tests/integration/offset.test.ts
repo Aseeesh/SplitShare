@@ -154,6 +154,20 @@ describeDb("cancelling out what members owe each other", () => {
       cancellableCents: 0,
     });
 
+    // The cancelled amounts also settle the shares behind them: Ann's 3000 share of
+    // the groceries is paid, so only Cal's share of it is still open.
+    expect(
+      (
+        await prisma.expenseSplit.findFirstOrThrow({
+          where: { expenseId: groceries.expenseId, userId: a!.id },
+        })
+      ).settledAt,
+    ).not.toBeNull();
+    expect(
+      (await prisma.expense.findUniqueOrThrow({ where: { id: groceries.expenseId } }))
+        .status,
+    ).toBe("PARTIALLY_PAID");
+
     // Offsets move no money: every person's net is exactly what it was.
     expect(await nets(householdId)).toEqual(netsBefore);
 

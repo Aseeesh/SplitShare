@@ -469,6 +469,7 @@ model ExpenseSplit {
   expense   Expense    @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   user      User       @relation(fields: [userId], references: [id])
   payments  Payment[]
+  allocations PaymentAllocation[]
   reminders Reminder[]
 
   @@unique([expenseId, userId])
@@ -507,6 +508,7 @@ model Payment {
   reversesPayment Payment?            @relation("PaymentReversal", fields: [reversesPaymentId], references: [id])
   reversedBy     Payment?             @relation("PaymentReversal")
   confirmation   PaymentConfirmation?
+  allocations    PaymentAllocation[]
 
   @@index([householdId, paidAt])
   @@index([toUserId])
@@ -700,4 +702,22 @@ model PlatformAuditLog {
   @@index([createdAt])
   @@index([entityType, entityId])
   @@map("platform_audit_logs")
+}
+
+/// How a confirmed payment was applied to individual shares. A payment can cover
+/// several shares, or part of one, and payments themselves are immutable, so the
+/// split of "which share got how much" lives here. Append-only (§10).
+model PaymentAllocation {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  paymentId      String   @map("payment_id") @db.Uuid
+  expenseSplitId String   @map("expense_split_id") @db.Uuid
+  amountCents    BigInt   @map("amount_cents")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  payment      Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  expenseSplit ExpenseSplit @relation(fields: [expenseSplitId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentId, expenseSplitId])
+  @@index([expenseSplitId])
+  @@map("payment_allocations")
 }
