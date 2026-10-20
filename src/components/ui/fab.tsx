@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "motion/react";
+import { motion, useMotionValueEvent, useScroll } from "motion/react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 
 /**
@@ -9,10 +10,24 @@ import { Plus } from "lucide-react";
  * and sits above the bottom tab bar and the home-indicator inset.
  */
 export function Fab({ href, label }: { href: string; label: string }) {
+  // Tucks away while scrolling down, so it never sits on top of the amounts
+  // being read, and returns as soon as the user scrolls back up.
+  const { scrollY } = useScroll();
+  const [hidden, setHidden] = useState(false);
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    const previous = scrollY.getPrevious() ?? 0;
+    if (latest > previous && latest > 80) setHidden(true);
+    else if (latest < previous) setHidden(false);
+  });
+
   return (
     <motion.div
       initial={{ scale: 0, rotate: -90, opacity: 0 }}
-      animate={{ scale: 1, rotate: 0, opacity: 1 }}
+      animate={
+        hidden
+          ? { scale: 0.6, y: 90, opacity: 0, rotate: 0 }
+          : { scale: 1, y: 0, opacity: 1, rotate: 0 }
+      }
       transition={{ type: "spring", stiffness: 380, damping: 22, delay: 0.35 }}
       whileTap={{ scale: 0.9 }}
       className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 lg:bottom-8"

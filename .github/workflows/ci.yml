@@ -24,6 +24,47 @@ jobs:
       - name: Deploy scripts are valid shell
         run: for f in scripts/deploy/deploy.sh scripts/deploy/targets/*.sh; do bash -n "$f"; done
 
+  e2e:
+    name: e2e (phone viewports)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: splitshare_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/splitshare_e2e
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/splitshare_e2e
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/splitshare_e2e
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm prisma:generate
+      - run: pnpm prisma:deploy
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phone-screenshots
+          path: test-results/screens
+          if-no-files-found: ignore
+
   verify:
     name: lint, typecheck, test, build
     runs-on: ubuntu-latest
