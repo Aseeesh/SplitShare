@@ -17,7 +17,8 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DIRECT_URL: ${{ secrets.DIRECT_URL }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
-      NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+      # The live deployment, which may differ from the app's public-facing URL.
+      NEXT_PUBLIC_APP_URL: ${{ vars.DEPLOY_URL || vars.NEXT_PUBLIC_APP_URL }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
