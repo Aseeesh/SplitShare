@@ -7,7 +7,7 @@ import { createExpense } from "@/actions/expenses/create";
 import { respondToSplit } from "@/actions/expenses/respond";
 import { createHousehold } from "@/actions/households/create";
 import { confirmPayment } from "@/actions/payments/confirm";
-import { confirmOffset, proposeOffset } from "@/actions/payments/offset";
+import { confirmOffset, proposeOffset, withdrawOffset } from "@/actions/payments/offset";
 import type { ActionResult } from "@/lib/actions/result";
 import { loadDebtMatrix } from "@/lib/ledger/load";
 import { pairPositions } from "@/lib/ledger/pairwise";
@@ -246,5 +246,81 @@ describeDb("cancelling out what members owe each other", () => {
     expect((await confirmOffset({ householdId, reference })).ok).toBe(false);
     actAs(a!);
     expect((await proposeOffset({ householdId, withUserId: b!.id })).ok).toBe(true);
+  });
+
+  it("lets only the proposer withdraw, and only before it is accepted", async () => {
+    const { prisma } = db!;
+    const [a, b] = await Promise.all(["Ann", "Bob"].map(user));
+    actAs(a!);
+    const { householdId } = expectOk(
+      await createHousehold({ name: "Flat", currency: "NZD" }),
+    );
+    await prisma.householdMember.create({
+      data: { householdId, userId: b!.id, role: "MEMBER" },
+    });
+
+    const date = new Date("2026-10-07T00:00:00.000Z");
+    const spend = async (payer: typeof a, cents: number, description: string) => {
+      actAs(payer!);
+      const e = expectOk(
+        await createExpense({
+          householdId,
+          paidByUserId: payer!.id,
+          categoryId: null,
+          description,
+          amountCents: cents,
+          currency: "NZD",
+          date,
+          splitMethod: "EQUAL",
+          participants: [a, b].map((u) => ({ userId: u!.id })),
+        }),
+      );
+      actAs(payer === a ? b! : a!);
+      expectOk(
+        await respondToSplit({
+          householdId,
+          expenseId: e.expenseId,
+          decision: "ACCEPTED",
+        }),
+      );
+    };
+    await spend(a, 10000, "Dinner");
+    await spend(b, 6000, "Groceries");
+
+    actAs(a!);
+    const first = expectOk(await proposeOffset({ householdId, withUserId: b!.id }));
+
+    // The other person cannot withdraw someone else's proposal.
+    actAs(b!);
+    expect((await withdrawOffset({ householdId, reference: first.reference })).ok).toBe(
+      false,
+    );
+
+    // The proposer can; afterwards it cannot be accepted, and a new one can be made.
+    actAs(a!);
+    expectOk(await withdrawOffset({ householdId, reference: first.reference }));
+    actAs(b!);
+    expect((await confirmOffset({ householdId, reference: first.reference })).ok).toBe(
+      false,
+    );
+    actAs(a!);
+    expect((await withdrawOffset({ householdId, reference: first.reference })).ok).toBe(
+      false,
+    );
+    const second = expectOk(await proposeOffset({ householdId, withUserId: b!.id }));
+
+    // Reversal rows are inert: nothing was ever confirmed, so no balances moved.
+    const reversals = await prisma.payment.count({
+      where: { householdId, method: "OFFSET", reversesPaymentId: { not: null } },
+    });
+    expect(reversals).toBe(2);
+
+    // Once accepted it is final.
+    actAs(b!);
+    expectOk(await confirmOffset({ householdId, reference: second.reference }));
+    actAs(a!);
+    expect((await withdrawOffset({ householdId, reference: second.reference })).ok).toBe(
+      false,
+    );
   });
 });

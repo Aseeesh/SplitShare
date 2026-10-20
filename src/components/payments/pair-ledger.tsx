@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Scale } from "lucide-react";
 
-import { confirmOffset, proposeOffset } from "@/actions/payments/offset";
+import { confirmOffset, proposeOffset, withdrawOffset } from "@/actions/payments/offset";
 import { AnimatedMoney } from "@/components/ui/animated-money";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";

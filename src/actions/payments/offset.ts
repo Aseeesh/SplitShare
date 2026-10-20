@@ -15,6 +15,7 @@ import { allocateConfirmedPayment } from "@/lib/payments/allocate";
 
 const proposeSchema = z.object({ householdId: z.uuid(), withUserId: z.uuid() });
 const confirmSchema = z.object({ householdId: z.uuid(), reference: z.string().min(1) });
+const withdrawSchema = confirmSchema;
 
 /** How much of what two members owe each other can be cancelled, from the books. */
 async function cancellableBetween(
@@ -79,6 +80,8 @@ export async function proposeOffset(
         householdId: data.householdId,
         method: "OFFSET",
         confirmation: { is: null },
+        reversedBy: { is: null },
+        reversesPaymentId: null,
         // An expired proposal no longer blocks a fresh one.
         paidAt: { gt: offsetProposalCutoff() },
         OR: [
@@ -183,10 +186,12 @@ export async function confirmOffset(input: unknown): Promise<ActionResult<null>>
         householdId: data.householdId,
         method: "OFFSET",
         reference: data.reference,
+        reversesPaymentId: null,
       },
       select: {
         id: true,
         householdId: true,
+        reversedBy: { select: { id: true } },
         fromUserId: true,
         toUserId: true,
         amountCents: true,
@@ -198,6 +203,9 @@ export async function confirmOffset(input: unknown): Promise<ActionResult<null>>
     // §2.4(d) — an unknown or foreign reference reads as missing.
     if (legs.length !== 2) {
       return fail("WRONG_HOUSEHOLD", "Not found");
+    }
+    if (legs.some((leg) => leg.reversedBy)) {
+      return fail("CONFLICT", "That cancel-out was withdrawn.");
     }
     if (legs.some((leg) => leg.confirmation)) {
       return fail("CONFLICT", "That cancel-out has already been confirmed.");
@@ -249,6 +257,93 @@ export async function confirmOffset(input: unknown): Promise<ActionResult<null>>
     });
 
     revalidatePath(`/households/${data.householdId}`);
+    return ok(null);
+  } catch (error) {
+    return toActionResult(error);
+  }
+}
+
+/**
+ * Withdraws a cancel-out you proposed, before the other person has accepted it.
+ *
+ * Payments are immutable, so withdrawing inserts a reversal row for each leg
+ * (negative amount, `reversesPaymentId` set) rather than deleting anything. Only
+ * the proposer may do it, and only while neither leg is confirmed.
+ */
+export async function withdrawOffset(input: unknown): Promise<ActionResult<null>> {
+  try {
+    const data = withdrawSchema.parse(input);
+    const membership = await requireCapability(data.householdId, "RECORD_OWN_PAYMENT");
+
+    const parsed = parseOffsetReference(data.reference);
+    if (!parsed) {
+      return fail("VALIDATION", "That is not a cancel-out.");
+    }
+    if (parsed.proposerId !== membership.userId) {
+      return fail(
+        "INSUFFICIENT_ROLE",
+        "Only the person who proposed it can withdraw it.",
+      );
+    }
+
+    const legs = await prisma.payment.findMany({
+      where: {
+        householdId: data.householdId,
+        method: "OFFSET",
+        reference: data.reference,
+        reversesPaymentId: null,
+      },
+      select: {
+        id: true,
+        fromUserId: true,
+        toUserId: true,
+        amountCents: true,
+        currency: true,
+        confirmation: { select: { id: true } },
+        reversedBy: { select: { id: true } },
+      },
+    });
+    if (legs.length !== 2) {
+      return fail("WRONG_HOUSEHOLD", "Not found");
+    }
+    if (legs.some((leg) => leg.confirmation)) {
+      return fail(
+        "CONFLICT",
+        "It has already been accepted, so it can no longer be withdrawn.",
+      );
+    }
+    if (legs.some((leg) => leg.reversedBy)) {
+      return fail("CONFLICT", "That cancel-out was already withdrawn.");
+    }
+
+    await prisma.$transaction(async (tx) => {
+      for (const leg of legs) {
+        const reversal = await tx.payment.create({
+          data: {
+            householdId: data.householdId,
+            fromUserId: leg.fromUserId,
+            toUserId: leg.toUserId,
+            amountCents: -leg.amountCents,
+            currency: leg.currency,
+            method: "OFFSET",
+            reference: data.reference,
+            reversesPaymentId: leg.id,
+            note: "Withdrawn by the person who proposed it",
+          },
+          select: { id: true },
+        });
+        await writeAuditLog(tx, {
+          householdId: data.householdId,
+          actorUserId: membership.userId,
+          action: "PAYMENT_REVERSED",
+          entityType: "payment",
+          entityId: leg.id,
+          after: { reversalPaymentId: reversal.id, reason: "offset withdrawn" },
+        });
+      }
+    });
+
+    revalidatePath(`/households/${data.householdId}/payments`);
     return ok(null);
   } catch (error) {
     return toActionResult(error);
