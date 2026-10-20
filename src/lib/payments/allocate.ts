@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma-node/client";
 import { fromDbCents, toDbCents } from "@/lib/money";
 import { statusAfterPaymentConfirmed } from "@/lib/expenses/state";
+import { apportion } from "@/lib/ledger/pairwise";
 
 /**
  * Applies a just-confirmed payment to the payer's shares.
@@ -17,6 +18,11 @@ import { statusAfterPaymentConfirmed } from "@/lib/expenses/state";
  *
  * Runs inside the confirming transaction, so the confirmation, the allocations,
  * the share settlements and the expense status changes commit together.
+ *
+ * With several funders a share is owed to them in proportion to what each
+ * funded (the same apportionment the pairwise ledger uses), so a payment to one
+ * funder covers at most THAT funder's portion of the share, and the share counts
+ * as settled only once every funder's portion is covered.
  *
  * Money beyond what the payer owes the recipient is not allocated; it stays in
  * the balances as a credit (§12), which is the truth of an overpayment.
@@ -49,7 +55,12 @@ export async function allocateConfirmedPayment(
         funders: { some: { userId: payment.toUserId } },
       },
     },
-    select: { id: true, amountCents: true, expenseId: true },
+    select: {
+      id: true,
+      amountCents: true,
+      expenseId: true,
+      expense: { select: { funders: { select: { userId: true, amountCents: true } } } },
+    },
     orderBy: [{ expense: { date: "asc" } }, { createdAt: "asc" }],
   });
 
@@ -60,24 +71,47 @@ export async function allocateConfirmedPayment(
   for (const share of shares) {
     if (left <= 0) break;
 
-    // Already covered by earlier confirmed payments, linked or allocated.
+    // What this funder is owed out of the share, and what is already covered.
+    const shareCents = fromDbCents(share.amountCents, "split amount");
+    const portion =
+      apportion(
+        shareCents,
+        share.expense.funders.map((f) => ({
+          id: f.userId,
+          weight: fromDbCents(f.amountCents, "funder amount"),
+        })),
+      ).get(payment.toUserId) ?? 0;
+    if (portion <= 0) continue;
+
     const [linked, allocatedBefore] = await Promise.all([
-      tx.payment.aggregate({
+      tx.payment.findMany({
         where: { expenseSplitId: share.id, confirmation: { isNot: null } },
-        _sum: { amountCents: true },
+        select: { toUserId: true, amountCents: true },
       }),
-      tx.paymentAllocation.aggregate({
+      tx.paymentAllocation.findMany({
         where: { expenseSplitId: share.id },
-        _sum: { amountCents: true },
+        select: { amountCents: true, payment: { select: { toUserId: true } } },
       }),
     ]);
-    const covered =
-      fromDbCents(linked._sum.amountCents ?? 0n, "linked total") +
-      fromDbCents(allocatedBefore._sum.amountCents ?? 0n, "allocated total");
-    const remaining = fromDbCents(share.amountCents, "split amount") - covered;
-    if (remaining <= 0) continue;
+    const covers = [
+      ...linked.map((row) => ({
+        to: row.toUserId,
+        cents: fromDbCents(row.amountCents, "linked"),
+      })),
+      ...allocatedBefore.map((row) => ({
+        to: row.payment.toUserId,
+        cents: fromDbCents(row.amountCents, "allocated"),
+      })),
+    ];
+    const coveredAll = covers.reduce((sum, c) => sum + c.cents, 0);
+    const coveredToThem = covers
+      .filter((c) => c.to === payment.toUserId)
+      .reduce((sum, c) => sum + c.cents, 0);
 
-    const take = Math.min(left, remaining);
+    const remainingToThem = portion - coveredToThem;
+    if (remainingToThem <= 0) continue;
+
+    const take = Math.min(left, remainingToThem);
     await tx.paymentAllocation.create({
       data: {
         paymentId: payment.id,
@@ -89,7 +123,7 @@ export async function allocateConfirmedPayment(
     allocated += take;
     touched.add(share.expenseId);
 
-    if (take >= remaining) {
+    if (coveredAll + take >= shareCents) {
       await tx.expenseSplit.update({ where: { id: share.id }, data: { settledAt: now } });
       settledNow.add(share.id);
     }
