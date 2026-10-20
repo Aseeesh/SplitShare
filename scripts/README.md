@@ -26,6 +26,7 @@ The GitHub workflow picks the target from the repo variable `DEPLOY_TARGET`
 | secret | `VERCEL_TOKEN` | optional `vercel` target (create at vercel.com/account/tokens) |
 | secret | `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | vercel target (from `.vercel/project.json`) |
 | variable | `DEPLOY_ENABLED` = `true` | switches the deploy job on |
+| variable | `DEPLOY_URL` | where the release is served (readiness wait + smoke) |
 | variable | `DEPLOY_TARGET` | optional: `vercel-hook` (default), `vercel`, `cloudflare` |
 
 Existing secrets (`DATABASE_URL`, `DIRECT_URL`, `CRON_SECRET`, …) are reused.

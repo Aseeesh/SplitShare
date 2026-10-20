@@ -6,5 +6,5 @@ required_env() { echo "CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID DATABASE_URL A
 deploy() {
   pnpm exec opennextjs-cloudflare build >&2
   pnpm exec wrangler deploy >&2
-  echo "${NEXT_PUBLIC_APP_URL:-https://split-share.ashishrijal.com.np}"
+  echo "${DEPLOY_URL:-${NEXT_PUBLIC_APP_URL:-https://split-share.ashishrijal.com.np}}"
 }
