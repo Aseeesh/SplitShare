@@ -133,6 +133,34 @@ def run_cron(args: argparse.Namespace) -> int:
     return 0 if code == 200 else 1
 
 
+def wait_for_sha(args: argparse.Namespace) -> int:
+    """Block until /api/health reports the commit we just released.
+
+    A deploy hook returns before the build finishes, so smoke-testing straight
+    away would test the previous release. Polling for the SHA proves the new one
+    is the one serving, on any host that exposes it.
+    """
+    import time
+
+    base = args.url.rstrip("/")
+    deadline = time.monotonic() + args.timeout
+    seen = None
+    while time.monotonic() < deadline:
+        code, body = _request(f"{base}/api/health")
+        if code == 200:
+            try:
+                seen = json.loads(body).get("sha")
+            except ValueError:
+                seen = None
+            if seen == args.sha:
+                print(f"live: {args.sha[:7]}")
+                return 0
+        print(f"waiting… status={code} serving={str(seen)[:7]} want={args.sha[:7]}")
+        time.sleep(args.interval)
+    print(f"error: {args.sha[:7]} was not live after {args.timeout}s", file=sys.stderr)
+    return 1
+
+
 def smoke(args: argparse.Namespace) -> int:
     """Post-deploy checks. The cron route must reject anonymous calls (§20)."""
     base = args.url.rstrip("/")
@@ -141,6 +169,7 @@ def smoke(args: argparse.Namespace) -> int:
         ("landing page renders", f"{base}/", None, 200),
         ("cron rejects anonymous", f"{base}/api/cron/reminders", None, 401),
         ("manifest served", f"{base}/manifest.webmanifest", None, 200),
+        ("health: app and database up", f"{base}/api/health", None, 200),
     ]
     failed = 0
     for label, url, headers, want in checks:

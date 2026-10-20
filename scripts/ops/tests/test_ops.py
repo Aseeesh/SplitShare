@@ -45,6 +45,24 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(config.database_url(), "direct")
 
 
+class WaitTests(unittest.TestCase):
+    def _run(self, responses):
+        import time
+        from ops import commands
+        args = cli.build_parser().parse_args(
+            ["wait", "https://x.test", "abcdef1234", "--timeout", "5", "--interval", "0"]
+        )
+        it = iter(responses)
+        with mock.patch.object(commands, "_request", side_effect=lambda *_a, **_k: next(it)):
+            with mock.patch.object(time, "sleep"):
+                return commands.wait_for_sha(args)
+
+    def test_succeeds_once_the_new_sha_is_serving(self):
+        old = (200, b'{"sha": "0000000"}')
+        new = (200, b'{"sha": "abcdef1234"}')
+        self.assertEqual(self._run([old, (503, b""), new]), 0)
+
+
 class CliTests(unittest.TestCase):
     def test_user_scope_needs_a_target(self):
         self.assertEqual(cli.main(["set-limit", "user", "5"]), 2)

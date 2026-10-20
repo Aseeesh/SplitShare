@@ -1,7 +1,7 @@
 name: Deploy
 
 # Production pipeline: the CI gates, then migrations, then a deploy to whichever
-# target the repo variable DEPLOY_TARGET names (default: vercel), then smoke
+# target the repo variable DEPLOY_TARGET names (default: vercel-hook), then smoke
 # checks against the live URL. Nothing here is provider-specific — that lives in
 # scripts/deploy/targets/*.sh — so changing host is a one-variable change.
 #
@@ -26,14 +26,15 @@ jobs:
     needs: ci
     if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
-    environment: production
+    environment: Production
     env:
-      DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET || 'vercel' }}
+      DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET || 'vercel-hook' }}
       # Migrations run from CI so every target gets them, not just the one whose
       # build command happens to run them.
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DIRECT_URL: ${{ secrets.DIRECT_URL }}
-      # Vercel
+      # Vercel — deploy hook (no token) or API token, depending on the target
+      VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -62,6 +63,11 @@ jobs:
       - name: Deploy (${{ env.DEPLOY_TARGET }})
         id: deploy
         run: scripts/deploy/deploy.sh "$DEPLOY_TARGET"
+
+      # A hook returns before the build is done, so wait for the new commit to
+      # be the one serving before testing anything.
+      - name: Wait for this commit to go live
+        run: python scripts/ops/cli.py wait "${{ steps.deploy.outputs.url }}" "$GITHUB_SHA"
 
       - name: Smoke test
         run: python scripts/ops/cli.py smoke "${{ steps.deploy.outputs.url }}"

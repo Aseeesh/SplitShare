@@ -47,6 +47,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--url")
     p.set_defaults(run=commands.run_cron)
 
+    p = sub.add_parser("wait", help="wait until /api/health serves the given commit")
+    p.add_argument("url")
+    p.add_argument("sha")
+    p.add_argument("--timeout", type=int, default=900)
+    p.add_argument("--interval", type=int, default=15)
+    p.set_defaults(run=commands.wait_for_sha)
+
     p = sub.add_parser("smoke", help="post-deploy HTTP checks")
     p.add_argument("url")
     p.set_defaults(run=commands.smoke)
