@@ -25,7 +25,7 @@ jobs:
     name: Deploy to production
     needs: ci
     if: ${{ vars.DEPLOY_ENABLED == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: Production
     env:
       DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET || 'vercel-hook' }}
@@ -46,13 +46,13 @@ jobs:
       # Where the release is served, for the readiness wait and smoke tests.
       DEPLOY_URL: ${{ vars.DEPLOY_URL }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
