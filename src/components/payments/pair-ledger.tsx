@@ -140,10 +140,29 @@ export function PairLedger({
               </span>
 
               {position.pendingOffsetReference ? (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                  {position.pendingOffsetIsYours
-                    ? "Waiting for them to accept"
-                    : "Waiting for you"}
+                <span className="flex items-center gap-2">
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                    {position.pendingOffsetIsYours
+                      ? "Waiting for them to accept"
+                      : "Waiting for you"}
+                  </span>
+                  {position.pendingOffsetIsYours ? (
+                    <button
+                      type="button"
+                      disabled={busy === position.pendingOffsetReference}
+                      onClick={() =>
+                        run(position.pendingOffsetReference!, () =>
+                          withdrawOffset({
+                            householdId,
+                            reference: position.pendingOffsetReference!,
+                          }),
+                        )
+                      }
+                      className="font-medium text-slate-600 underline underline-offset-2 disabled:opacity-50 dark:text-slate-300"
+                    >
+                      Withdraw
+                    </button>
+                  ) : null}
                 </span>
               ) : position.cancellableCents > 0 ? (
                 <Button
