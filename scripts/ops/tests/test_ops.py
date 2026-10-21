@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 import tempfile
@@ -108,5 +109,37 @@ class CliTests(unittest.TestCase):
             cli.main(["explode"])
 
 
+
+class RunCronRetryTests(unittest.TestCase):
+    def setUp(self) -> None:
+        from ops import commands
+
+        self.commands = commands
+        self.args = argparse.Namespace(url="https://example.test")
+        patcher = mock.patch.dict(os.environ, {"CRON_SECRET": "s"})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        sleeper = mock.patch.object(commands.time, "sleep", lambda _s: None)
+        sleeper.start()
+        self.addCleanup(sleeper.stop)
+
+    def test_retries_server_errors_until_success(self) -> None:
+        responses = [(503, b"cold"), (502, b"bad"), (200, b"{}")]
+        with mock.patch.object(self.commands, "_request", side_effect=responses) as req:
+            self.assertEqual(self.commands.run_cron(self.args), 0)
+            self.assertEqual(req.call_count, 3)
+
+    def test_never_retries_an_auth_failure(self) -> None:
+        with mock.patch.object(self.commands, "_request", return_value=(401, b"no")) as req:
+            self.assertEqual(self.commands.run_cron(self.args), 1)
+            self.assertEqual(req.call_count, 1)
+
+    def test_gives_up_after_three_failed_attempts(self) -> None:
+        with mock.patch.object(self.commands, "_request", return_value=(500, b"x")) as req:
+            self.assertEqual(self.commands.run_cron(self.args), 1)
+            self.assertEqual(req.call_count, 3)
+
+
 if __name__ == "__main__":
     unittest.main()
+

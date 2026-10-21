@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -214,11 +215,25 @@ def _request(url: str, headers: dict[str, str] | None = None) -> tuple[int, byte
 
 
 def run_cron(args: argparse.Namespace) -> int:
-    """Trigger the app's reminders/recurring job. Replaces a platform cron."""
+    """Trigger the app's reminders/recurring job. Replaces a platform cron.
+
+    Retries network errors and 5xx (cold starts, a restarting host) but never a
+    4xx: a 401 means the secrets disagree and retrying cannot fix that.
+    """
     base = (args.url or config.require("NEXT_PUBLIC_APP_URL")).rstrip("/")
     secret = config.require("CRON_SECRET")
-    code, body = _request(f"{base}/api/cron/reminders", {"Authorization": f"Bearer {secret}"})
-    print(f"{code} {body.decode(errors='replace')[:300]}")
+    attempts = 3
+    code, body = 0, b""
+    for attempt in range(1, attempts + 1):
+        try:
+            code, body = _request(f"{base}/api/cron/reminders", {"Authorization": f"Bearer {secret}"})
+        except (urllib.error.URLError, TimeoutError, OSError) as err:
+            code, body = 0, str(err).encode()
+        print(f"attempt {attempt}/{attempts}: {code} {body.decode(errors='replace')[:300]}")
+        if code == 200 or 400 <= code < 500:
+            break
+        if attempt < attempts:
+            time.sleep(5 * attempt)
     return 0 if code == 200 else 1
 
 
