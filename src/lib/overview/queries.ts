@@ -270,29 +270,31 @@ export interface PersonSuggestion {
 }
 
 /**
- * People an admin has been in an organisation with — current or past, active or
- * archived — who are not already in this one. Ranked by how many organisations
- * they have shared. Gated on MANAGE_MEMBERS: it exposes other people's emails.
+ * People you currently share an ACTIVE organisation with, ranked by how many
+ * you share. This is the only source of names and emails the invite and
+ * new-group autocompletes may show, so it deliberately never reaches beyond
+ * your own current memberships: a group you left, or one that is archived or
+ * suspended, reveals nobody. `excludeHouseholdId` hides people already in the
+ * group being invited into.
  */
-export async function listSuggestedPeople(
-  householdId: string,
+async function knownPeople(
+  userId: string,
+  excludeHouseholdId: string | null,
 ): Promise<PersonSuggestion[]> {
-  const membership = await requireCapability(householdId, "MANAGE_MEMBERS");
-
   const mine = await prisma.householdMember.findMany({
-    where: { userId: membership.userId },
+    where: { userId, removedAt: null, household: { status: "ACTIVE" } },
     select: { householdId: true },
   });
-  const sharedIds = mine.map((m) => m.householdId).filter((id) => id !== householdId);
-  if (sharedIds.length === 0) {
+  if (mine.length === 0) {
     return [];
   }
 
   const [candidates, current] = await Promise.all([
     prisma.householdMember.findMany({
       where: {
-        householdId: { in: sharedIds },
-        userId: { not: membership.userId },
+        householdId: { in: mine.map((m) => m.householdId) },
+        removedAt: null,
+        userId: { not: userId },
         user: { isPlaceholder: false, disabledAt: null },
       },
       select: {
@@ -300,16 +302,18 @@ export async function listSuggestedPeople(
         user: { select: { id: true, name: true, email: true } },
       },
     }),
-    prisma.householdMember.findMany({
-      where: { householdId, removedAt: null },
-      select: { userId: true },
-    }),
+    excludeHouseholdId === null
+      ? Promise.resolve([])
+      : prisma.householdMember.findMany({
+          where: { householdId: excludeHouseholdId, removedAt: null },
+          select: { userId: true },
+        }),
   ]);
 
-  const inHousehold = new Set(current.map((m) => m.userId));
+  const excluded = new Set(current.map((m) => m.userId));
   const byUser = new Map<string, PersonSuggestion>();
   for (const row of candidates) {
-    if (inHousehold.has(row.user.id) || isPlaceholderEmail(row.user.email)) {
+    if (excluded.has(row.user.id) || isPlaceholderEmail(row.user.email)) {
       continue;
     }
     const entry = byUser.get(row.user.id) ?? {
@@ -325,6 +329,27 @@ export async function listSuggestedPeople(
   }
 
   return [...byUser.values()]
-    .sort((a, b) => b.sharedHouseholds.length - a.sharedHouseholds.length)
-    .slice(0, 8);
+    .sort(
+      (a, b) =>
+        b.sharedHouseholds.length - a.sharedHouseholds.length ||
+        (a.name ?? a.email).localeCompare(b.name ?? b.email),
+    )
+    .slice(0, 100);
+}
+
+/** For inviting into an existing group. Gated on MANAGE_MEMBERS: it exposes emails. */
+export async function listSuggestedPeople(
+  householdId: string,
+): Promise<PersonSuggestion[]> {
+  const membership = await requireCapability(householdId, "MANAGE_MEMBERS");
+  return knownPeople(membership.userId, householdId);
+}
+
+/**
+ * For starting a new group. Any signed-in user may call it: it shows only
+ * people already visible to them as fellow members of their own groups.
+ */
+export async function listKnownPeople(): Promise<PersonSuggestion[]> {
+  const user = await requireAuth();
+  return knownPeople(user.id, null);
 }

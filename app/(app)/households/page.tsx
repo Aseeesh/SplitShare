@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ArchivedHouseholds } from "@/components/households/archived-households";
 import { listArchivedHouseholds, listHouseholds } from "@/lib/households/queries";
+import { listKnownPeople } from "@/lib/overview/queries";
 import { formatSignedMoney } from "@/lib/money";
 import { balanceToneClass, ROLE_TONES, STATUS_BADGE_BASE } from "@/lib/ui/status";
 import { StaggerItem } from "@/components/ui/motion";
@@ -20,9 +21,10 @@ export const metadata: Metadata = {
  * nothing here links into one.
  */
 export default async function HouseholdsPage() {
-  const [households, archived] = await Promise.all([
+  const [households, archived, people] = await Promise.all([
     listHouseholds(),
     listArchivedHouseholds(),
+    listKnownPeople(),
   ]);
   const totalCents = households.reduce(
     (sum, household) => sum + household.yourNetCents,
@@ -38,7 +40,7 @@ export default async function HouseholdsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Your households</h1>
 
       <div className="mt-4">
-        <CreateHousehold />
+        <CreateHousehold people={people} />
       </div>
 
       {households.length > 0 && singleCurrency ? (

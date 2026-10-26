@@ -39,7 +39,11 @@ export default async function HistoryPage({
 
   return (
     <>
-      <AppHeader householdName={household.name} role={household.yourRole} />
+      <AppHeader
+        householdId={household.id}
+        householdName={household.name}
+        role={household.yourRole}
+      />
       <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 p-4 pb-24">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-semibold tracking-tight">History</h1>

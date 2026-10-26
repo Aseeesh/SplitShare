@@ -46,13 +46,17 @@ export default async function MembersPage({
 
   return (
     <>
-      <AppHeader householdName={household.name} role={household.yourRole} />
+      <AppHeader
+        householdId={household.id}
+        householdName={household.name}
+        role={household.yourRole}
+      />
       <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 p-4 pb-24">
         <h1 className="text-xl font-semibold tracking-tight">Members</h1>
 
-        {canManage ? <AddMember householdId={householdId} /> : null}
+        {canManage ? <AddMember householdId={householdId} people={suggestions} /> : null}
         {canManage ? (
-          <SuggestedPeople householdId={householdId} people={suggestions} />
+          <SuggestedPeople householdId={householdId} people={suggestions.slice(0, 8)} />
         ) : null}
 
         <Card className="overflow-hidden">

@@ -72,7 +72,20 @@ straight away, so you do not depend on email arriving. A pending invite has a
 8. Confirm the payment. Expected: expense **Paid**, both balances $0.00.
 9. Lock the expense, then try to edit it. Expected: rejected.
 
-## 4. Also worth trying
+## 4. Switching groups and adding known people
+
+- Tap the **group name with the arrow** at the top of any group to open **Switch group**: every
+  group with your role and balance. Tap one to jump to it.
+- **Create a new group** in that sheet (or on the Households page). In "Add people", start
+  typing a name or email: you only ever see people who share a current group with you, with the
+  groups you share shown beside them. Pick as many as you like.
+- To add someone new, type their full Gmail address and press Enter. They are marked **new** and
+  you get a link to send them.
+- The same search is on **Members > Invite by email** for adding people to an existing group.
+- Check: someone who is not in any of your groups never appears in the suggestions, and neither
+  does anyone from a group you left or an archived group.
+
+## 5. Also worth trying
 
 - Split odd amounts ($100.01 three ways): parts must add up exactly to the total.
 - Shares and percentage splits; with the accept step on, B rejecting a split makes the expense **Disputed**.
@@ -82,6 +95,6 @@ straight away, so you do not depend on email arriving. A pending invite has a
 - Landing page: sign-in sheet opens, closes by dragging down, Escape, or "Not now".
 - Dark mode, offline banner (turn on airplane mode), pull to refresh.
 
-## 5. Report problems with
+## 6. Report problems with
 
 Device and browser, what you tapped, what you expected, what happened, a screenshot.

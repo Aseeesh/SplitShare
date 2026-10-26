@@ -92,7 +92,11 @@ export default async function NewExpensePage({
 
   return (
     <>
-      <AppHeader householdName={household.name} role={household.yourRole} />
+      <AppHeader
+        householdId={household.id}
+        householdName={household.name}
+        role={household.yourRole}
+      />
       <main className="mx-auto w-full max-w-2xl flex-1 p-4 pb-24">
         <h1 className="mb-4 text-xl font-semibold tracking-tight">
           {seed ? "Correct expense" : "Add an expense"}

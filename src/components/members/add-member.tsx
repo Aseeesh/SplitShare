@@ -8,7 +8,10 @@ import { addPlaceholderMember } from "@/actions/households/placeholders";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
+import type { PersonSuggestion } from "@/lib/overview/queries";
+
 import { InviteLink } from "./invite-link";
+import { PeoplePicker, type PickedPerson } from "./people-picker";
 
 /**
  * The two ways to add somebody.
@@ -18,41 +21,66 @@ import { InviteLink } from "./invite-link";
  * never sign up. Their shares count immediately, since there is nobody to
  * accept them (§8a).
  */
-export function AddMember({ householdId }: { householdId: string }) {
+export function AddMember({
+  householdId,
+  people,
+}: {
+  householdId: string;
+  people: PersonSuggestion[];
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<"tracked" | "invite">("tracked");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [picked, setPicked] = useState<PickedPerson[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [link, setLink] = useState<{ url: string; email: string } | null>(null);
+  const [links, setLinks] = useState<Array<{ url: string; email: string }>>([]);
   const [isPending, startTransition] = useTransition();
 
   function submit() {
     setError(null);
     setMessage(null);
-    setLink(null);
+    setLinks([]);
     startTransition(async () => {
-      const result =
-        mode === "tracked"
-          ? await addPlaceholderMember({ householdId, name })
-          : await inviteMember({ householdId, email });
-
-      if (!result.ok) {
-        setError(result.message);
+      if (mode === "tracked") {
+        const result = await addPlaceholderMember({ householdId, name });
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
+        setName("");
+        setMessage("Added. Their share of new expenses counts straight away.");
+        router.refresh();
         return;
       }
-      if ("acceptUrl" in result.data) {
-        setLink({ url: result.data.acceptUrl, email });
+
+      // One at a time: each invite is its own audited, rate-limited action.
+      const sent: Array<{ url: string; email: string }> = [];
+      const failed: string[] = [];
+      for (const person of picked) {
+        const result = await inviteMember({ householdId, email: person.email });
+        if (result.ok) {
+          sent.push({ url: result.data.acceptUrl, email: person.email });
+        } else {
+          failed.push(`${person.label}: ${result.message}`);
+        }
       }
-      setName("");
-      setEmail("");
-      setMessage(
-        mode === "tracked"
-          ? "Added. Their share of new expenses counts straight away."
-          : "Invitation created. Share the link below, or they can use the email if one was sent.",
+      setLinks(sent);
+      // Anyone whose invite failed stays picked so it can be retried.
+      setPicked((current) =>
+        current.filter((person) => !sent.some((s) => s.email === person.email)),
       );
-      router.refresh();
+      if (failed.length > 0) {
+        setError(failed.join(" "));
+      }
+      if (sent.length > 0) {
+        setMessage(
+          sent.length === 1
+            ? "Invitation created. Share the link below."
+            : `${sent.length} invitations created. Share each link below.`,
+        );
+        router.refresh();
+      }
     });
   }
 
@@ -81,8 +109,8 @@ export function AddMember({ householdId }: { householdId: string }) {
           : "They sign in with Google and accept their own shares. Nothing counts toward balances until they do."}
       </p>
 
-      <div className="mt-3 flex gap-2">
-        {mode === "tracked" ? (
+      {mode === "tracked" ? (
+        <div className="mt-3 flex gap-2">
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -90,25 +118,31 @@ export function AddMember({ householdId }: { householdId: string }) {
             maxLength={60}
             className="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           />
-        ) : (
-          <input
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            type="email"
-            inputMode="email"
-            placeholder="name@example.com"
-            className="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+          <Button onClick={submit} disabled={isPending || name.trim() === ""}>
+            {isPending ? "…" : "Add"}
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-2">
+          <PeoplePicker
+            people={people}
+            value={picked}
+            onChange={setPicked}
+            disabled={isPending}
           />
-        )}
-        <Button
-          onClick={submit}
-          disabled={
-            isPending || (mode === "tracked" ? name.trim() === "" : email.trim() === "")
-          }
-        >
-          {isPending ? "…" : "Add"}
-        </Button>
-      </div>
+          <Button
+            onClick={submit}
+            disabled={isPending || picked.length === 0}
+            className="w-full"
+          >
+            {isPending
+              ? "…"
+              : picked.length > 1
+                ? `Invite ${picked.length} people`
+                : "Invite"}
+          </Button>
+        </div>
+      )}
 
       {error ? (
         <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
@@ -120,7 +154,9 @@ export function AddMember({ householdId }: { householdId: string }) {
           {message}
         </p>
       ) : null}
-      {link ? <InviteLink url={link.url} email={link.email} /> : null}
+      {links.map((link) => (
+        <InviteLink key={link.email} url={link.url} email={link.email} />
+      ))}
     </Card>
   );
 }

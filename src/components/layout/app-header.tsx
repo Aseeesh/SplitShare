@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { GroupSwitcher } from "./group-switcher";
 import { RoleBadge } from "@/components/ui/badge";
 import type { HouseholdRole } from "@/generated/prisma/enums";
 
@@ -10,9 +11,11 @@ import type { HouseholdRole } from "@/generated/prisma/enums";
  * the way out has to be on the page.
  */
 export function AppHeader({
+  householdId,
   householdName,
   role,
 }: {
+  householdId: string;
   householdName: string;
   role: HouseholdRole;
 }) {
@@ -26,8 +29,8 @@ export function AppHeader({
         >
           <span aria-hidden="true">←</span>
         </Link>
-        <h1 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight">
-          {householdName}
+        <h1 className="flex min-w-0 flex-1">
+          <GroupSwitcher currentId={householdId} currentName={householdName} />
         </h1>
         <RoleBadge role={role} />
       </div>

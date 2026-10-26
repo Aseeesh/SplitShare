@@ -58,7 +58,11 @@ export default async function HouseholdPage({
 
   return (
     <>
-      <AppHeader householdName={household.name} role={household.yourRole} />
+      <AppHeader
+        householdId={household.id}
+        householdName={household.name}
+        role={household.yourRole}
+      />
       <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 p-4 pb-24">
         <BalanceSummary
           members={household.members}

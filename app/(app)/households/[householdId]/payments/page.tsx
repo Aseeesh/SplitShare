@@ -62,7 +62,11 @@ export default async function PaymentsPage({
 
   return (
     <>
-      <AppHeader householdName={household.name} role={household.yourRole} />
+      <AppHeader
+        householdId={household.id}
+        householdName={household.name}
+        role={household.yourRole}
+      />
       <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 p-4 pb-24">
         <h1 className="text-xl font-semibold tracking-tight">Payments</h1>
 

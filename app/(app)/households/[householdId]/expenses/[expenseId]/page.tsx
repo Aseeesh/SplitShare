@@ -44,7 +44,11 @@ export default async function ExpensePage({
 
   return (
     <>
-      <AppHeader householdName={household.name} role={household.yourRole} />
+      <AppHeader
+        householdId={household.id}
+        householdName={household.name}
+        role={household.yourRole}
+      />
       <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 p-4 pb-24">
         <Card className="p-5">
           <div className="flex items-start justify-between gap-3">
