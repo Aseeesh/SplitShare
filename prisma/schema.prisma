@@ -273,6 +273,9 @@ model Household {
   reminderOffsetDays Int[] @default([3, 7]) @map("reminder_offset_days")
   /// The split method pre-selected when creating a new expense in this group.
   defaultSplitMethod SplitMethod @default(EQUAL) @map("default_split_method")
+  /// When false ("quick mode") every split on a new expense starts ACCEPTED, so
+  /// nobody has to tap accept before it counts. Payment confirmation is unchanged.
+  requireAcceptance Boolean @default(true) @map("require_acceptance")
   status          HouseholdStatus @default(ACTIVE)
   archivedAt      DateTime? @map("archived_at")
   /// Per-household override of the platform's members-per-household limit.

@@ -18,6 +18,8 @@ export const createHouseholdSchema = z.object({
     .min(1, { error: "Give the household a name" })
     .max(100, { error: "Name cannot exceed 100 characters" }),
   currency: currencySchema,
+  /** false = quick mode: shares count without each person accepting them. */
+  requireAcceptance: z.boolean().default(true),
 });
 
 export const inviteMemberSchema = z.object({
@@ -50,6 +52,11 @@ export const changeRoleSchema = z.object({
 export const updateDefaultSplitMethodSchema = z.object({
   householdId: z.uuid(),
   method: z.enum(["EQUAL", "EXACT", "PERCENTAGE", "SHARES"]),
+});
+
+export const updateRequireAcceptanceSchema = z.object({
+  householdId: z.uuid(),
+  requireAcceptance: z.boolean(),
 });
 
 export type CreateHouseholdInput = z.infer<typeof createHouseholdSchema>;

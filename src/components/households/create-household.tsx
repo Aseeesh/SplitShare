@@ -17,13 +17,15 @@ export function CreateHousehold() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("NZD");
+  // Quick mode by default: nobody has to accept a share before it counts.
+  const [requireAcceptance, setRequireAcceptance] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function submit() {
     setError(null);
     startTransition(async () => {
-      const result = await createHousehold({ name, currency });
+      const result = await createHousehold({ name, currency, requireAcceptance });
       if (!result.ok) {
         setError(result.message);
         return;
@@ -60,6 +62,18 @@ export function CreateHousehold() {
           {isPending ? "…" : "Create"}
         </Button>
       </div>
+      <label className="mt-3 flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400">
+        <input
+          type="checkbox"
+          checked={requireAcceptance}
+          onChange={(event) => setRequireAcceptance(event.target.checked)}
+          className="accent-brand mt-0.5 size-4"
+        />
+        <span>
+          Everyone must accept their share before it counts. Leave off for a simple,
+          Splitwise-style group. You can change this later.
+        </span>
+      </label>
       {error ? (
         <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
           {error}

@@ -31,7 +31,19 @@ whoever **paid** is the payer; both can be any Member or Admin.
 
 A household's only admin cannot leave or be demoted.
 
-## 2. Test script (needs two people, or two Google accounts)
+## 2. Quick mode (the default for new groups)
+
+New groups skip the "accept your share" step: an expense counts the moment it is
+added, like Splitwise. An admin can turn the step back on from the household page
+(Settings > "Everyone must accept their share"). Paying someone back still needs the
+person who is paid to confirm.
+
+First sign-in lands on a one-screen "Start splitting" card: name the group, tap the
+button, then add people. **Invite by email** shows a link you can **Copy** or **Share**
+straight away, so you do not depend on email arriving. A pending invite has a
+**New link** button if you lose it.
+
+## 3. Test script (needs two people, or two Google accounts)
 
 **Person A (admin)**
 

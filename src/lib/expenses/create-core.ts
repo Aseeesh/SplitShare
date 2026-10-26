@@ -135,14 +135,28 @@ export async function createExpenseCore(
       participants: data.participants,
     });
 
+    // Also needed later for the notification copy. Both are cheap and
+    // `requireAuth` is already cached.
+    const [creator, household] = await Promise.all([
+      requireAuth(),
+      prisma.household.findUniqueOrThrow({
+        where: { id: data.householdId },
+        select: { name: true, requireAcceptance: true },
+      }),
+    ]);
+
     const splits = computed.map((split) => {
       const participant = memberById.get(split.userId)!;
-      const accepted = splitStartsAccepted({
-        participantUserId: split.userId,
-        funderUserIds,
-        createdByUserId: membership.userId,
-        isPlaceholder: participant.isPlaceholder,
-      });
+      // Quick mode (§8 amendment): the household has opted out of the accept
+      // step, so every share counts from the start.
+      const accepted =
+        !household.requireAcceptance ||
+        splitStartsAccepted({
+          participantUserId: split.userId,
+          funderUserIds,
+          createdByUserId: membership.userId,
+          isPlaceholder: participant.isPlaceholder,
+        });
       return { ...split, accepted, user: participant };
     });
 
@@ -154,15 +168,6 @@ export async function createExpenseCore(
 
     const now = new Date();
 
-    // Needed for the notification copy, which is written inside the
-    // transaction. Both are cheap and `requireAuth` is already cached.
-    const [creator, household] = await Promise.all([
-      requireAuth(),
-      prisma.household.findUniqueOrThrow({
-        where: { id: data.householdId },
-        select: { name: true },
-      }),
-    ]);
     const creatorName = creator.name ?? creator.email ?? "Someone";
 
     const expenseId = await prisma.$transaction(async (tx) => {

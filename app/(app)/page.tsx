@@ -1,11 +1,10 @@
-import Link from "next/link";
-
 import { ActivityFeed } from "@/components/overview/activity-feed";
 import { IncomeTiles } from "@/components/overview/income-tiles";
 import { OrgBreakdown } from "@/components/overview/org-breakdown";
 import { SpendHero } from "@/components/overview/spend-hero";
 import { getOverview, listRecentActivity } from "@/lib/overview/queries";
 
+import { QuickStart } from "@/components/households/quick-start";
 import { Landing } from "@/components/landing/landing";
 import { FadeIn } from "@/components/ui/motion";
 import { getOptionalUser } from "@/lib/auth/guards";
@@ -26,15 +25,8 @@ export default async function Home() {
 
     if (overview.households.length === 0) {
       return (
-        <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 p-4">
-          <h1 className="text-2xl font-semibold tracking-tight">Hi {first}</h1>
-          <p className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-400">
-            You are not in any household yet.{" "}
-            <Link href="/households" className="font-medium underline">
-              Create one
-            </Link>{" "}
-            to become its admin, or open an invitation link to join.
-          </p>
+        <main className="mx-auto w-full max-w-2xl flex-1 p-4">
+          <QuickStart firstName={first} />
         </main>
       );
     }

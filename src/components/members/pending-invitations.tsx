@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { revokeInvitation } from "@/actions/households/invite";
+import { inviteMember, revokeInvitation } from "@/actions/households/invite";
 import { Button } from "@/components/ui/button";
 import { Card, EmptyState } from "@/components/ui/card";
 import type { PendingInvitation } from "@/lib/households/queries";
+
+import { InviteLink } from "./invite-link";
 
 export function PendingInvitations({
   householdId,
@@ -18,6 +20,7 @@ export function PendingInvitations({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [links, setLinks] = useState<Record<string, string>>({});
 
   return (
     <Card className="overflow-hidden">
@@ -33,38 +36,71 @@ export function PendingInvitations({
       ) : (
         <ul className="divide-y divide-slate-200 dark:divide-slate-800">
           {invitations.map((invitation) => (
-            <li key={invitation.id} className="flex items-center gap-3 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm">{invitation.email}</p>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  Invited as {invitation.role.toLowerCase()} · expires{" "}
-                  {invitation.expiresAt.toLocaleDateString("en-NZ", {
-                    day: "numeric",
-                    month: "short",
-                  })}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                disabled={isPending}
-                className="min-h-9 px-3 text-xs"
-                onClick={() => {
-                  setError(null);
-                  startTransition(async () => {
-                    const result = await revokeInvitation({
-                      householdId,
-                      invitationId: invitation.id,
+            <li key={invitation.id} className="px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm">{invitation.email}</p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    Invited as {invitation.role.toLowerCase()} · expires{" "}
+                    {invitation.expiresAt.toLocaleDateString("en-NZ", {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  disabled={isPending}
+                  className="min-h-9 px-3 text-xs"
+                  onClick={() => {
+                    setError(null);
+                    // Only the hash is stored, so an old link cannot be shown
+                    // again. This issues a fresh one and withdraws the old.
+                    startTransition(async () => {
+                      const result = await inviteMember({
+                        householdId,
+                        email: invitation.email,
+                        role: invitation.role,
+                      });
+                      if (!result.ok) {
+                        setError(result.message);
+                        return;
+                      }
+                      setLinks((current) => ({
+                        ...current,
+                        [invitation.email]: result.data.acceptUrl,
+                      }));
+                      router.refresh();
                     });
-                    if (!result.ok) {
-                      setError(result.message);
-                      return;
-                    }
-                    router.refresh();
-                  });
-                }}
-              >
-                Withdraw
-              </Button>
+                  }}
+                >
+                  New link
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={isPending}
+                  className="min-h-9 px-3 text-xs"
+                  onClick={() => {
+                    setError(null);
+                    startTransition(async () => {
+                      const result = await revokeInvitation({
+                        householdId,
+                        invitationId: invitation.id,
+                      });
+                      if (!result.ok) {
+                        setError(result.message);
+                        return;
+                      }
+                      router.refresh();
+                    });
+                  }}
+                >
+                  Withdraw
+                </Button>
+              </div>
+              {links[invitation.email] ? (
+                <InviteLink url={links[invitation.email]} email={invitation.email} />
+              ) : null}
             </li>
           ))}
         </ul>

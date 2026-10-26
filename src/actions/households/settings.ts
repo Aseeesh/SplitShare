@@ -6,7 +6,7 @@ import { ok, toActionResult, type ActionResult } from "@/lib/actions/result";
 import { requireCapability } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/client";
 
-import { updateDefaultSplitMethodSchema } from "./schema";
+import { updateDefaultSplitMethodSchema, updateRequireAcceptanceSchema } from "./schema";
 
 /**
  * §5 — ADMIN only. Sets the split method the expense form pre-selects for new
@@ -22,6 +22,30 @@ export async function updateDefaultSplitMethod(
     await prisma.household.update({
       where: { id: data.householdId },
       data: { defaultSplitMethod: data.method },
+    });
+
+    revalidatePath(`/households/${data.householdId}`);
+    return ok(null);
+  } catch (error) {
+    return toActionResult(error);
+  }
+}
+
+/**
+ * §5 — ADMIN only. Switches quick mode: when acceptance is not required, new
+ * expenses count immediately. Expenses already awaiting acceptance are left as
+ * they are; only expenses created afterwards are affected.
+ */
+export async function updateRequireAcceptance(
+  input: unknown,
+): Promise<ActionResult<null>> {
+  try {
+    const data = updateRequireAcceptanceSchema.parse(input);
+    await requireCapability(data.householdId, "MANAGE_SETTINGS");
+
+    await prisma.household.update({
+      where: { id: data.householdId },
+      data: { requireAcceptance: data.requireAcceptance },
     });
 
     revalidatePath(`/households/${data.householdId}`);

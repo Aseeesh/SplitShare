@@ -29,7 +29,7 @@ import { inviteMemberSchema, revokeInvitationSchema } from "./schema";
  */
 export async function inviteMember(
   input: unknown,
-): Promise<ActionResult<{ invitationId: string }>> {
+): Promise<ActionResult<{ invitationId: string; acceptUrl: string }>> {
   try {
     const data = inviteMemberSchema.parse(input);
     const membership = await requireCapability(data.householdId, "MANAGE_MEMBERS");
@@ -97,18 +97,21 @@ export async function inviteMember(
     });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const acceptUrl = buildInvitationUrl(appUrl, token);
     await sendInvitationEmail(
       { email: data.email },
       {
         householdName: result.householdName,
         inviterName: inviter.name ?? inviter.email ?? "An admin",
-        acceptUrl: buildInvitationUrl(appUrl, token),
+        acceptUrl,
         expiresAt: result.invitation.expiresAt,
       },
     );
 
     revalidatePath(`/households/${data.householdId}/members`);
-    return ok({ invitationId: result.invitation.id });
+    // Returned to the admin so they can share the link themselves: email is
+    // optional (no provider configured) and often lands in spam.
+    return ok({ invitationId: result.invitation.id, acceptUrl });
   } catch (error) {
     return toActionResult(error);
   }

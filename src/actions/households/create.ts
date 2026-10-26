@@ -45,11 +45,12 @@ export async function createHousehold(
         data: {
           name: data.name,
           currency: data.currency,
+          requireAcceptance: data.requireAcceptance,
           createdByUserId: user.id,
           members: { create: { userId: user.id, role: "ADMIN" } },
           categories: { create: DEFAULT_CATEGORIES },
         },
-        select: { id: true, name: true, currency: true },
+        select: { id: true, name: true, currency: true, requireAcceptance: true },
       });
 
       // §11 — in the same transaction as the change itself.

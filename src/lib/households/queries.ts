@@ -139,6 +139,8 @@ export interface HouseholdDetail {
   currency: string;
   reminderOffsetDays: number[];
   defaultSplitMethod: SplitMethod;
+  /** false = quick mode: new expenses count without each person accepting. */
+  requireAcceptance: boolean;
   yourRole: HouseholdRole;
   /** The caller can see this household only because they are a super user. */
   viaSuperUser: boolean;
@@ -157,6 +159,7 @@ export async function getHousehold(householdId: string): Promise<HouseholdDetail
         currency: true,
         reminderOffsetDays: true,
         defaultSplitMethod: true,
+        requireAcceptance: true,
       },
     }),
     getMemberBalances(householdId),

@@ -8,6 +8,8 @@ import { addPlaceholderMember } from "@/actions/households/placeholders";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
+import { InviteLink } from "./invite-link";
+
 /**
  * The two ways to add somebody.
  *
@@ -23,11 +25,13 @@ export function AddMember({ householdId }: { householdId: string }) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [link, setLink] = useState<{ url: string; email: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function submit() {
     setError(null);
     setMessage(null);
+    setLink(null);
     startTransition(async () => {
       const result =
         mode === "tracked"
@@ -38,12 +42,15 @@ export function AddMember({ householdId }: { householdId: string }) {
         setError(result.message);
         return;
       }
+      if ("acceptUrl" in result.data) {
+        setLink({ url: result.data.acceptUrl, email });
+      }
       setName("");
       setEmail("");
       setMessage(
         mode === "tracked"
           ? "Added. Their share of new expenses counts straight away."
-          : "Invitation sent. They will join once they open the link.",
+          : "Invitation created. Share the link below, or they can use the email if one was sent.",
       );
       router.refresh();
     });
@@ -113,6 +120,7 @@ export function AddMember({ householdId }: { householdId: string }) {
           {message}
         </p>
       ) : null}
+      {link ? <InviteLink url={link.url} email={link.email} /> : null}
     </Card>
   );
 }

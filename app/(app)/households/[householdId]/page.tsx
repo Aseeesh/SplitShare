@@ -8,6 +8,7 @@ import { SpendingCharts } from "@/components/expenses/spending-charts";
 import { AppHeader } from "@/components/layout/app-header";
 import { HouseholdNav } from "@/components/layout/household-nav";
 import { BalanceSummary, SettleUpPlan } from "@/components/dashboard/balance-summary";
+import { AcceptanceSetting } from "@/components/households/acceptance-setting";
 import { DefaultSplitSetting } from "@/components/households/default-split-setting";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
@@ -86,6 +87,10 @@ export default async function HouseholdPage({
               householdId={householdId}
               current={household.defaultSplitMethod}
               canManage
+            />
+            <AcceptanceSetting
+              householdId={householdId}
+              requireAcceptance={household.requireAcceptance}
             />
           </Card>
         ) : null}

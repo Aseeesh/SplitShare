@@ -167,6 +167,15 @@ the groceries.
 - A placeholder is always `MEMBER`, never `ADMIN`: it cannot sign in, so admin
   rights would be authority nobody can exercise.
 
+## §8b Quick mode (amends §8)
+
+`households.require_acceptance` (default `true`, so existing households are
+unchanged). When `false`, `createExpenseCore` writes every split `ACCEPTED`, so a
+share counts toward §12 balances without the person tapping accept. New groups
+created from the UI default to quick mode; an admin can flip it on the household
+page (`updateRequireAcceptance`, `MANAGE_SETTINGS`). It affects only expenses
+created afterwards. §9 payment confirmation is unchanged.
+
 ## §9 Payment rules
 
 - `PaymentStatus` = `PENDING_CONFIRMATION | CONFIRMED | REVERSED`.
