@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { SignInButton } from "@/components/auth/sign-in-sheet";
+
 const LINKS = [
   { href: "#demo", label: "Try a split" },
   { href: "#how", label: "How it works" },
@@ -52,12 +54,9 @@ export function LandingNav() {
           ))}
         </nav>
 
-        <Link
-          href="/signin"
-          className="bg-brand hover:bg-brand-strong focus-visible:outline-brand inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-medium text-white transition-[colors,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98]"
-        >
+        <SignInButton className="bg-brand hover:bg-brand-strong focus-visible:outline-brand inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-medium text-white transition-[colors,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98]">
           Sign in
-        </Link>
+        </SignInButton>
       </div>
     </header>
   );

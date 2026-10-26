@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { SignInButton } from "@/components/auth/sign-in-sheet";
 import { acceptInvitation } from "@/actions/households/accept-invite";
 import { getOptionalUser } from "@/lib/auth/guards";
 import { previewInvitation } from "@/lib/invitations/preview";
@@ -50,12 +50,12 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
           <span className={`${STATUS_BADGE_BASE} ${tone.className}`}>{tone.label}</span>.
           Sign in to accept.
         </p>
-        <Link
-          href={`/signin?callbackUrl=${encodeURIComponent(`/invite/${token}`)}`}
+        <SignInButton
+          callbackUrl={`/invite/${token}`}
           className="mt-6 inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
         >
           Sign in to accept
-        </Link>
+        </SignInButton>
       </Shell>
     );
   }

@@ -2,9 +2,9 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Check, Clock } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { SignInButton } from "@/components/auth/sign-in-sheet";
 import { AnimatedMoney } from "@/components/ui/animated-money";
 
 /**
@@ -196,13 +196,10 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.24 }}
             className="mt-8 flex flex-wrap items-center gap-3"
           >
-            <Link
-              href="/signin"
-              className="bg-brand hover:bg-brand-strong focus-visible:outline-brand group inline-flex min-h-12 items-center gap-2 rounded-xl px-6 text-sm font-medium text-white shadow-lg shadow-emerald-600/20 transition-[colors,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98]"
-            >
+            <SignInButton className="bg-brand hover:bg-brand-strong focus-visible:outline-brand group inline-flex min-h-12 items-center gap-2 rounded-xl px-6 text-sm font-medium text-white shadow-lg shadow-emerald-600/20 transition-[colors,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98]">
               Get started with Google
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
+            </SignInButton>
             <a
               href="#demo"
               className="inline-flex min-h-12 items-center rounded-xl border border-slate-300 px-6 text-sm font-medium transition-colors hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"

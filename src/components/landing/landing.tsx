@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { SignInButton } from "@/components/auth/sign-in-sheet";
 
 import { BalancesDemo } from "./balances-demo";
 import { Features } from "./features";
@@ -29,12 +29,9 @@ export function Landing() {
               Create a household in under a minute, invite your flatmates by email, and
               add your first expense.
             </p>
-            <Link
-              href="/signin"
-              className="mt-8 inline-flex min-h-12 items-center rounded-xl bg-white px-7 text-sm font-semibold text-slate-900 transition-[transform,background-color] hover:bg-slate-100 active:scale-[0.98]"
-            >
+            <SignInButton className="mt-8 inline-flex min-h-12 items-center rounded-xl bg-white px-7 text-sm font-semibold text-slate-900 transition-[transform,background-color] hover:bg-slate-100 active:scale-[0.98]">
               Sign in with Google
-            </Link>
+            </SignInButton>
           </Reveal>
         </section>
       </main>
