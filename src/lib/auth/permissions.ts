@@ -91,6 +91,19 @@ export function canWith(
   return overrides.get(overrideKey(role, capability)) ?? can(role, capability);
 }
 
+/**
+ * Every capability a role has once the super user's overrides are applied. The
+ * UI must use this (not `can`) to decide which controls to show, or a switch
+ * flipped in the permission matrix would change what the server allows while
+ * the buttons stay as they were.
+ */
+export function effectiveCapabilities(
+  role: HouseholdRole,
+  overrides: PermissionOverrides,
+): Capability[] {
+  return ALL_CAPABILITIES.filter((capability) => canWith(role, capability, overrides));
+}
+
 /** Every capability a role has, for rendering UI affordances. */
 export function capabilitiesFor(role: HouseholdRole): Capability[] {
   return (Object.keys(MATRIX) as Capability[]).filter((capability) =>

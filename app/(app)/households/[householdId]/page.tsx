@@ -12,7 +12,6 @@ import { AcceptanceSetting } from "@/components/households/acceptance-setting";
 import { DefaultSplitSetting } from "@/components/households/default-split-setting";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
-import { can } from "@/lib/auth/permissions";
 import { NotAMemberError } from "@/lib/auth/errors";
 import { requireAuth } from "@/lib/auth/guards";
 import { getMonthlySpending, getSpendingByCategory } from "@/lib/expenses/analytics";
@@ -84,7 +83,7 @@ export default async function HouseholdPage({
           currency={household.currency}
         />
 
-        {household.yourRole === "ADMIN" ? (
+        {household.capabilities.includes("MANAGE_SETTINGS") ? (
           <Card>
             <CardHeader title="Settings" />
             <DefaultSplitSetting
@@ -107,12 +106,12 @@ export default async function HouseholdPage({
             name: member.name ?? member.email,
           }))}
           items={recurring}
-          canCreate={household.yourRole !== "VIEWER"}
+          canCreate={household.capabilities.includes("CREATE_EXPENSE")}
         />
 
         <ExpenseList householdId={householdId} expenses={expenses} />
       </main>
-      {can(household.yourRole, "CREATE_EXPENSE") && !household.viaSuperUser ? (
+      {household.capabilities.includes("CREATE_EXPENSE") && !household.viaSuperUser ? (
         <Fab href={`/households/${householdId}/expenses/new`} label="Add an expense" />
       ) : null}
       <HouseholdNav householdId={householdId} />

@@ -11,7 +11,6 @@ import { Card, EmptyState } from "@/components/ui/card";
 import { Money } from "@/components/ui/money";
 import { NotAMemberError } from "@/lib/auth/errors";
 import { requireAuth } from "@/lib/auth/guards";
-import { can } from "@/lib/auth/permissions";
 import { getHousehold } from "@/lib/households/queries";
 import { getPairLedger } from "@/lib/ledger/queries";
 import { listPayments, listPaymentsAwaitingYou } from "@/lib/payments/queries";
@@ -58,7 +57,7 @@ export default async function PaymentsPage({
     // The dashboard already reports balances that do not sum to zero.
   }
 
-  const canPay = can(household.yourRole, "RECORD_OWN_PAYMENT");
+  const canPay = household.capabilities.includes("RECORD_OWN_PAYMENT");
 
   return (
     <>

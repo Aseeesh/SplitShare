@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 
 import { setPermissionOverride } from "@/actions/admin/platform";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -29,20 +29,37 @@ export function PermissionMatrix({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
-  const map = new Map(overrides.map((o) => [`${o.role}:${o.capability}`, o.allowed]));
+  const [isPending, startTransition] = useTransition();
+  const saved = new Map(overrides.map((o) => [`${o.role}:${o.capability}`, o.allowed]));
+  // Flips the switch the instant it is tapped; React reverts it if the action
+  // fails, and the server's value replaces it once the refresh lands.
+  const [map, applyOptimistic] = useOptimistic(
+    saved,
+    (state, change: { key: string; value: boolean | null }) => {
+      const next = new Map(state);
+      if (change.value === null) {
+        next.delete(change.key);
+      } else {
+        next.set(change.key, change.value);
+      }
+      return next;
+    },
+  );
 
   function toggle(role: HouseholdRole, capability: Capability) {
+    // One save at a time, so a double-tap cannot flip a switch back.
+    if (isPending) {
+      return;
+    }
     const current = canWith(role, capability, map);
     const defaultValue = canWith(role, capability, new Map());
     const next = !current;
+    // Null removes the override, restoring the built-in default.
+    const allowed = next === defaultValue ? null : next;
     setError(null);
     startTransition(async () => {
-      const result = await setPermissionOverride({
-        role,
-        capability,
-        allowed: next === defaultValue ? null : next,
-      });
+      applyOptimistic({ key: overrideKey(role, capability), value: allowed });
+      const result = await setPermissionOverride({ role, capability, allowed });
       if (!result.ok) {
         setError(result.message);
         return;

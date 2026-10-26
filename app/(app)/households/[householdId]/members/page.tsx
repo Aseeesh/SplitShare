@@ -11,7 +11,6 @@ import { PendingInvitations } from "@/components/members/pending-invitations";
 import { Card } from "@/components/ui/card";
 import { NotAMemberError } from "@/lib/auth/errors";
 import { requireAuth } from "@/lib/auth/guards";
-import { can } from "@/lib/auth/permissions";
 import { getHousehold, listPendingInvitations } from "@/lib/households/queries";
 import { listSuggestedPeople } from "@/lib/overview/queries";
 import { isPlaceholderEmail } from "@/lib/households/placeholders";
@@ -34,7 +33,7 @@ export default async function MembersPage({
     throw error;
   }
 
-  const canManage = household.viaSuperUser || can(household.yourRole, "MANAGE_MEMBERS");
+  const canManage = household.capabilities.includes("MANAGE_MEMBERS");
   // §5 — pending invitations are admin-only data, so they are not even fetched
   // for anyone else.
   const [invitations, suggestions] = canManage
@@ -89,7 +88,8 @@ export default async function MembersPage({
           householdId={householdId}
           canLeave={!household.viaSuperUser}
           canArchive={
-            !household.viaSuperUser && can(household.yourRole, "ARCHIVE_HOUSEHOLD")
+            !household.viaSuperUser &&
+            household.capabilities.includes("ARCHIVE_HOUSEHOLD")
           }
         />
       </main>

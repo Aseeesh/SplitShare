@@ -3,7 +3,18 @@ import "server-only";
 import { cache } from "react";
 
 import type { HouseholdRole, SplitMethod } from "@/generated/prisma/enums";
-import { requireAuth, requireHouseholdMember } from "@/lib/auth/guards";
+import {
+  loadPermissionOverrides,
+  requireAuth,
+  requireHouseholdMember,
+} from "@/lib/auth/guards";
+import {
+  ALL_CAPABILITIES,
+  effectiveCapabilities,
+  READ_ONLY_CAPABILITIES,
+  superUserCan,
+  type Capability,
+} from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/client";
 import { fromDbCents } from "@/lib/money";
 
@@ -142,6 +153,13 @@ export interface HouseholdDetail {
   /** false = quick mode: new expenses count without each person accepting. */
   requireAcceptance: boolean;
   yourRole: HouseholdRole;
+  /**
+   * What the caller may actually do here: their role with the super user's
+   * matrix overrides applied, or the narrower super-user set for someone who is
+   * only looking in, and read-only when the household is not active. Render
+   * controls from this, never from the static role matrix.
+   */
+  capabilities: Capability[];
   /** The caller can see this household only because they are a super user. */
   viaSuperUser: boolean;
   members: MemberBalance[];
@@ -150,7 +168,7 @@ export interface HouseholdDetail {
 export async function getHousehold(householdId: string): Promise<HouseholdDetail> {
   const membership = await requireHouseholdMember(householdId);
 
-  const [household, members] = await Promise.all([
+  const [household, members, overrides] = await Promise.all([
     prisma.household.findUniqueOrThrow({
       where: { id: householdId },
       select: {
@@ -163,11 +181,21 @@ export async function getHousehold(householdId: string): Promise<HouseholdDetail
       },
     }),
     getMemberBalances(householdId),
+    loadPermissionOverrides(),
   ]);
+
+  const granted = membership.viaSuperUser
+    ? ALL_CAPABILITIES.filter(superUserCan)
+    : effectiveCapabilities(membership.role, overrides);
+  const capabilities =
+    membership.status === "ACTIVE"
+      ? granted
+      : granted.filter((capability) => READ_ONLY_CAPABILITIES.includes(capability));
 
   return {
     ...household,
     yourRole: membership.role,
+    capabilities,
     viaSuperUser: membership.viaSuperUser,
     members,
   };
