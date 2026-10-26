@@ -47,29 +47,41 @@ straight away, so you do not depend on email arriving. A pending invite has a
 
 **Person A (admin)**
 
-1. Tap **Sign in**, continue with Google.
-2. Households > create **"Flat 3"**, currency NZD. You are the admin.
-3. Members > **Invite by email** (Person B's address). Send B the invite link.
+1. Tap **Sign in**, continue with Google. You land on "Start splitting".
+2. Name the group **"Flat 3"**, currency NZD, tap **Start splitting**. You are the admin.
+3. On Members, **Invite by email** with Person B's address, then **Copy link** and send it to B.
    Also try **Track someone** with a name, for a flatmate with no account.
 
-**Person B** 4. Open the invite link, sign in (the sheet appears), tap **Accept invitation**. You are a Member.
+**Person B**
 
-**Person A** 5. Add expense: "Groceries", $90.00, paid by A, split **Equal** between A and B, attach a photo receipt.
-Expected: status **Pending acceptance**, B's share **$45.00**.
+4. Open the invite link, sign in (the sheet appears), tap **Accept invitation**. You are a Member.
 
-**Person B** 6. Dashboard shows "Awaiting your action". Accept. Expected: **Accepted**. 7. Record a payment of $45.00 to A. Expected: **Pending confirmation**.
+**Person A**
 
-**Person A** 8. Confirm the payment. Expected: expense **Paid**, both balances $0.00. 9. Lock the expense, then try to edit it. Expected: rejected.
+5. Add expense: "Groceries", $90.00, paid by A, split **Equal** between A and B, attach a photo receipt.
+   Expected (quick mode): status **Accepted** at once, B's share **$45.00**, B owes A $45.00.
+   To test the accept step, turn it on in Settings first; then expect **Partially accepted**.
 
-## 3. Also worth trying
+**Person B**
+
+6. _(Only if the accept step is on.)_ Dashboard shows "Awaiting your action". Accept.
+7. Record a payment of $45.00 to A. Expected: **Pending confirmation**.
+
+**Person A**
+
+8. Confirm the payment. Expected: expense **Paid**, both balances $0.00.
+9. Lock the expense, then try to edit it. Expected: rejected.
+
+## 4. Also worth trying
 
 - Split odd amounts ($100.01 three ways): parts must add up exactly to the total.
-- Shares and percentage splits; B rejecting a split (expense becomes **Disputed**).
+- Shares and percentage splits; with the accept step on, B rejecting a split makes the expense **Disputed**.
 - Delete or edit an expense: it creates a reversal, history stays visible.
 - A Viewer should not see Add expense or payment buttons.
+- A lost invite: Members > Pending invitations > **New link**.
 - Landing page: sign-in sheet opens, closes by dragging down, Escape, or "Not now".
 - Dark mode, offline banner (turn on airplane mode), pull to refresh.
 
-## 4. Report problems with
+## 5. Report problems with
 
 Device and browser, what you tapped, what you expected, what happened, a screenshot.
