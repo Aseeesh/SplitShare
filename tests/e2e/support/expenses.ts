@@ -35,6 +35,8 @@ export async function fillExpenseForm(
 ): Promise<void> {
   await page.goto(`/households/${group.id}/expenses/new`);
   await expect(page.getByRole("heading", { name: "Add an expense" })).toBeVisible();
+  // Text typed before hydration is wiped when React takes over (seen in WebKit).
+  await page.waitForLoadState("networkidle");
   await page.getByPlaceholder("Groceries").fill(input.description);
   await page.getByPlaceholder("59.41").fill(input.amount);
   if (input.method && input.method !== "EQUAL") {

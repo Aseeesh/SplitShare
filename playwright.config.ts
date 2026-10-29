@@ -21,6 +21,18 @@ export default defineConfig({
       name: "small-phone",
       use: { ...devices["Pixel 7"], viewport: { width: 360, height: 640 } },
     },
+    // Cross-browser pass: E2E_BROWSERS=all. Safari (iPhone) is the browser most
+    // phones actually run; Firefox has no mobile emulation, so it gets a phone-sized
+    // viewport only.
+    ...(process.env.E2E_BROWSERS === "all"
+      ? [
+          { name: "webkit-iphone", use: { ...devices["iPhone 14"] } },
+          {
+            name: "firefox-phone",
+            use: { ...devices["Desktop Firefox"], viewport: { width: 412, height: 915 } },
+          },
+        ]
+      : []),
   ],
   webServer: {
     command: `pnpm exec next dev -p ${PORT}`,

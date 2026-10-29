@@ -28,7 +28,16 @@ export const BASE_URL = `http://localhost:${process.env.E2E_PORT ?? 3100}`;
 /** `members` maps a first name to a role; the first ADMIN creates the group. */
 export async function createGroup(
   members: Record<string, Role>,
-  opts: { currency?: string; requireAcceptance?: boolean } = {},
+  opts: {
+    currency?: string;
+    requireAcceptance?: boolean;
+    /**
+     * A real mailbox to receive the people's email, as `local+tag-name@domain`
+     * (Gmail delivers every `+` alias to the same inbox). Default is
+     * `@example.test`, which is not deliverable: only use this with mail enabled.
+     */
+    emailTo?: string;
+  } = {},
 ): Promise<FixtureGroup> {
   const creator = Object.entries(members).find(([, role]) => role === "ADMIN")?.[0];
   if (!creator) throw new Error("createGroup needs at least one ADMIN");
@@ -41,7 +50,9 @@ export async function createGroup(
     await client.query("BEGIN");
     for (const name of Object.keys(members)) {
       const id = randomUUID();
-      const email = `${name.toLowerCase()}.${tag}@example.test`;
+      const email = opts.emailTo
+        ? opts.emailTo.replace("@", `+${tag}-${name.toLowerCase()}@`)
+        : `${name.toLowerCase()}.${tag}@example.test`;
       const token = `e2e-${tag}-${name.toLowerCase()}`;
       await client.query(
         `INSERT INTO users (id, name, email, email_verified, updated_at)

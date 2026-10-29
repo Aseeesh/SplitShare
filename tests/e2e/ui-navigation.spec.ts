@@ -137,7 +137,12 @@ interface Visit {
 
 function watchErrors(page: Page): string[] {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
+  page.on("pageerror", (e) => {
+    // WebKit reports a background fetch cancelled by the navigation that
+    // replaced the page as a CORS-style failure. Not an app error.
+    if (/due to access control checks/.test(e.message)) return;
+    errors.push(`pageerror: ${e.message}`);
+  });
   page.on("console", (m) => {
     // Dev-server infrastructure (HMR socket, a restart mid-run) is not an app error.
     if (

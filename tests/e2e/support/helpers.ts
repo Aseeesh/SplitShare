@@ -1,5 +1,5 @@
 import { Client } from "pg";
-import type { Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 import { SESSION_TOKENS, type Person } from "../tokens";
 
@@ -43,4 +43,19 @@ export async function userIdByName(name: string): Promise<string> {
   ]);
   if (!rows[0]) throw new Error(`seed user "${name}" not found`);
   return rows[0].id;
+}
+
+/**
+ * Waits until React has taken over an element (it tags hydrated DOM nodes with a
+ * `__reactProps$…` key). Text typed before that point is wiped on hydration,
+ * which `networkidle` does not reliably rule out, notably in WebKit.
+ */
+export async function hydrated(locator: Locator): Promise<void> {
+  await expect
+    .poll(() =>
+      locator
+        .first()
+        .evaluate((el) => Object.keys(el).some((k) => k.startsWith("__reactProps"))),
+    )
+    .toBe(true);
 }

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { createGroup, createSuperUser, signInAsPerson } from "./support/fixtures";
-import { query } from "./support/helpers";
+import { hydrated, query } from "./support/helpers";
 
 test.describe("§23 multi-org + §8b quick mode: creating a group", () => {
   test("a signed-in user creates a group, becomes ADMIN, quick mode on, chosen currency", async ({
@@ -11,6 +11,7 @@ test.describe("§23 multi-org + §8b quick mode: creating a group", () => {
     const name = `Trip ${Date.now()}`;
     await signInAsPerson(page, people.Ann!);
     await page.goto("/households");
+    await page.waitForLoadState("networkidle"); // typing before hydration is wiped (WebKit)
     await page.getByLabel("Group name").fill(name);
     await page.getByLabel("Currency").selectOption("USD");
     await page.getByRole("button", { name: "Create group" }).click();
@@ -52,6 +53,7 @@ test.describe("§23 multi-org + §8b quick mode: creating a group", () => {
     const name = `Strict ${Date.now()}`;
     await signInAsPerson(page, people.Ann!);
     await page.goto("/households");
+    await page.waitForLoadState("networkidle"); // typing before hydration is wiped (WebKit)
     await page.getByLabel("Group name").fill(name);
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Create group" }).click();
@@ -69,6 +71,7 @@ test.describe("§23 multi-org + §8b quick mode: creating a group", () => {
     const { name } = await createGroup({ Ann: "ADMIN" });
     await page.context().clearCookies();
     await page.goto("/households");
+    await page.waitForLoadState("networkidle"); // typing before hydration is wiped (WebKit)
     await expect(page.getByText(name)).toHaveCount(0);
     await expect(page.getByLabel("Group name")).toHaveCount(0);
     const rows = await query("SELECT 1 FROM households WHERE name = $1", [name]);
@@ -88,6 +91,7 @@ test.describe("§23 limits: max_households_per_admin and the per-user override",
     await page.goto("/admin", { waitUntil: "networkidle" });
     const row = page.locator("li").filter({ hasText: people.Ann!.email });
     await expect(row).toBeVisible();
+    await hydrated(row.locator("input"));
     await row.locator("input").fill("1");
     await row.getByRole("button", { name: "Save" }).click();
     await expect(row.getByRole("status")).toHaveText("Saved");
@@ -101,6 +105,7 @@ test.describe("§23 limits: max_households_per_admin and the per-user override",
     const blockedName = `Blocked ${Date.now()}`;
     await signInAsPerson(page, people.Ann!);
     await page.goto("/households");
+    await page.waitForLoadState("networkidle"); // typing before hydration is wiped (WebKit)
     await page.getByLabel("Group name").fill(blockedName);
     await page.getByRole("button", { name: "Create group" }).click();
     await expect(page.locator("p[role=alert]")).toContainText("up to 1 households");
@@ -112,12 +117,14 @@ test.describe("§23 limits: max_households_per_admin and the per-user override",
     await signInAsPerson(page, root);
     await page.goto("/admin", { waitUntil: "networkidle" });
     const row2 = page.locator("li").filter({ hasText: people.Ann!.email });
+    await hydrated(row2.locator("input"));
     await row2.locator("input").fill("2");
     await row2.getByRole("button", { name: "Save" }).click();
     await expect(row2.getByRole("status")).toHaveText("Saved");
 
     await signInAsPerson(page, people.Ann!);
     await page.goto("/households");
+    await page.waitForLoadState("networkidle"); // typing before hydration is wiped (WebKit)
     await page.getByLabel("Group name").fill(blockedName);
     await page.getByRole("button", { name: "Create group" }).click();
     await page.waitForURL(/\/households\/[0-9a-f-]{36}$/);
@@ -146,6 +153,7 @@ test.describe("§23 limits: max_households_per_admin and the per-user override",
     const name = `Bobs ${Date.now()}`;
     await signInAsPerson(page, people.Bob!);
     await page.goto("/households");
+    await page.waitForLoadState("networkidle"); // typing before hydration is wiped (WebKit)
     await page.getByLabel("Group name").fill(name);
     await page.getByRole("button", { name: "Create group" }).click();
     await page.waitForURL(/\/households\/[0-9a-f-]{36}$/);
