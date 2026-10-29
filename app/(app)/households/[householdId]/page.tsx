@@ -47,6 +47,10 @@ export default async function HouseholdPage({
     throw error;
   }
 
+  // A super user who is not a member can read but not add, and the add page 404s for them.
+  const canAddExpense =
+    household.capabilities.includes("CREATE_EXPENSE") && !household.viaSuperUser;
+
   const [awaiting, expenses, byCategory, byMonth, recurring] = await Promise.all([
     listAwaitingYourAction(householdId),
     listExpenses(householdId, { limit: 20 }),
@@ -109,9 +113,13 @@ export default async function HouseholdPage({
           canCreate={household.capabilities.includes("CREATE_EXPENSE")}
         />
 
-        <ExpenseList householdId={householdId} expenses={expenses} />
+        <ExpenseList
+          householdId={householdId}
+          expenses={expenses}
+          canAdd={canAddExpense}
+        />
       </main>
-      {household.capabilities.includes("CREATE_EXPENSE") && !household.viaSuperUser ? (
+      {canAddExpense ? (
         <Fab href={`/households/${householdId}/expenses/new`} label="Add an expense" />
       ) : null}
       <HouseholdNav householdId={householdId} />

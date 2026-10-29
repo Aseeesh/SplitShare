@@ -59,6 +59,9 @@ export async function seed(connectionString: string): Promise<void> {
     const bob = await user("Bob");
     const cal = await user("Cal");
     const dee = await user("Dee");
+    const eve = await user("Eve");
+    const fay = await user("Fay");
+    const gus = await user("Gus");
 
     const flat = await prisma.household.create({
       data: {
@@ -100,6 +103,39 @@ export async function seed(connectionString: string): Promise<void> {
       data: {
         name: "Acceptance flat",
         currency: "NZD",
+        createdByUserId: ann.id,
+        members: {
+          create: [
+            { userId: ann.id, role: "ADMIN" },
+            { userId: bob.id, role: "MEMBER" },
+          ],
+        },
+      },
+    });
+
+    // One group per access situation, so the role/lifecycle specs can sign in as
+    // each kind of person and see exactly what that person is allowed to do.
+    await prisma.household.create({
+      data: {
+        name: "Roles house",
+        currency: "NZD",
+        createdByUserId: ann.id,
+        members: {
+          create: [
+            { userId: ann.id, role: "ADMIN" },
+            { userId: bob.id, role: "MEMBER" },
+            { userId: eve.id, role: "VIEWER" },
+            { userId: gus.id, role: "MEMBER", removedAt: new Date() },
+          ],
+        },
+      },
+    });
+    await prisma.household.create({
+      data: {
+        name: "Frozen flat",
+        currency: "NZD",
+        status: "ARCHIVED",
+        archivedAt: new Date(),
         createdByUserId: ann.id,
         members: {
           create: [
@@ -215,6 +251,11 @@ export async function seed(connectionString: string): Promise<void> {
       data: [
         { sessionToken: SESSION_TOKENS.Ann, userId: ann.id, expires: sessionExpiry },
         { sessionToken: SESSION_TOKENS.Bob, userId: bob.id, expires: sessionExpiry },
+        { sessionToken: SESSION_TOKENS.Cal, userId: cal.id, expires: sessionExpiry },
+        { sessionToken: SESSION_TOKENS.Dee, userId: dee.id, expires: sessionExpiry },
+        { sessionToken: SESSION_TOKENS.Eve, userId: eve.id, expires: sessionExpiry },
+        { sessionToken: SESSION_TOKENS.Fay, userId: fay.id, expires: sessionExpiry },
+        { sessionToken: SESSION_TOKENS.Gus, userId: gus.id, expires: sessionExpiry },
       ],
     });
     await prisma.$executeRaw`SELECT 1`;

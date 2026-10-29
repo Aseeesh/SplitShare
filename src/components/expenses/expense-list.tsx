@@ -15,22 +15,27 @@ function formatDate(date: Date): string {
 export function ExpenseList({
   householdId,
   expenses,
+  canAdd,
   title = "Recent expenses",
 }: {
   householdId: string;
   expenses: ExpenseListItem[];
+  /** The add page answers 404 to anyone who cannot create, so only offer it to those who can. */
+  canAdd: boolean;
   title?: string;
 }) {
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
         <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        <Link
-          href={`/households/${householdId}/expenses/new`}
-          className="text-sm font-medium text-slate-600 underline underline-offset-4 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-        >
-          Add
-        </Link>
+        {canAdd ? (
+          <Link
+            href={`/households/${householdId}/expenses/new`}
+            className="text-sm font-medium text-slate-600 underline underline-offset-4 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+          >
+            Add
+          </Link>
+        ) : null}
       </div>
 
       {expenses.length === 0 ? (
