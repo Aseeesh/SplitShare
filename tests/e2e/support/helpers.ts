@@ -9,7 +9,7 @@ export async function signInAs(page: Page, who: Person): Promise<void> {
     {
       name: "authjs.session-token",
       value: SESSION_TOKENS[who],
-      url: "http://localhost:3100",
+      url: `http://localhost:${process.env.E2E_PORT ?? 3100}`,
       httpOnly: true,
       sameSite: "Lax",
     },
