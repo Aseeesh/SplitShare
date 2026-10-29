@@ -10,7 +10,7 @@ import { SuggestedPeople } from "@/components/members/suggested-people";
 import { PendingInvitations } from "@/components/members/pending-invitations";
 import { Card } from "@/components/ui/card";
 import { NotAMemberError } from "@/lib/auth/errors";
-import { requireAuth } from "@/lib/auth/guards";
+import { requirePageUser } from "@/lib/auth/guards";
 import { getHousehold, listPendingInvitations } from "@/lib/households/queries";
 import { listSuggestedPeople } from "@/lib/overview/queries";
 import { isPlaceholderEmail } from "@/lib/households/placeholders";
@@ -21,7 +21,7 @@ export default async function MembersPage({
   params,
 }: PageProps<"/households/[householdId]/members">) {
   const { householdId } = await params;
-  const viewer = await requireAuth();
+  const viewer = await requirePageUser();
 
   let household;
   try {

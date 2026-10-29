@@ -5,7 +5,7 @@ import { ExpenseForm, type CorrectionSeed } from "@/components/expenses/expense-
 import { AppHeader } from "@/components/layout/app-header";
 import { HouseholdNav } from "@/components/layout/household-nav";
 import { InsufficientRoleError, NotAMemberError } from "@/lib/auth/errors";
-import { requireAuth, requireCapability } from "@/lib/auth/guards";
+import { requirePageUser, requireCapability } from "@/lib/auth/guards";
 import { getExpense } from "@/lib/expenses/queries";
 import { toMoneyInput } from "@/lib/money";
 import { prisma } from "@/lib/db/client";
@@ -19,7 +19,7 @@ export default async function NewExpensePage({
 }: PageProps<"/households/[householdId]/expenses/new">) {
   const { householdId } = await params;
   const { correct } = await searchParams;
-  const viewer = await requireAuth();
+  const viewer = await requirePageUser();
 
   try {
     // §5 — a VIEWER has no business on this page at all, so it is refused here

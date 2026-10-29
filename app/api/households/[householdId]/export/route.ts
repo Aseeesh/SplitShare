@@ -25,7 +25,14 @@ export async function GET(
   { params }: { params: Promise<{ householdId: string }> },
 ): Promise<Response> {
   const { householdId } = await params;
-  const membership = await requireHouseholdMember(householdId);
+  let membership;
+  try {
+    membership = await requireHouseholdMember(householdId);
+  } catch {
+    // 404 for signed-out, non-member and malformed ids alike: a 500 leaked a
+    // stack trace path and a 403 would confirm the household exists.
+    return new Response("Not found", { status: 404 });
+  }
 
   const household = await prisma.household.findUniqueOrThrow({
     where: { id: householdId },

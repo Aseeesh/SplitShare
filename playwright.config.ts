@@ -35,6 +35,11 @@ export default defineConfig({
       AUTH_URL: `http://localhost:${PORT}`,
       NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
       NEXT_TELEMETRY_DISABLED: "1",
+      // Next loads .env into the server, which would otherwise send every test
+      // invite through the developer's real Gmail. Blank = the no-op logger.
+      GMAIL_USER: "",
+      GMAIL_APP_PASSWORD: "",
+      EMAIL_API_KEY: "",
     },
   },
 });

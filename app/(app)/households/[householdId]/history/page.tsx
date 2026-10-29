@@ -5,6 +5,7 @@ import { HistoryTimeline } from "@/components/history/history-timeline";
 import { AppHeader } from "@/components/layout/app-header";
 import { HouseholdNav } from "@/components/layout/household-nav";
 import { NotAMemberError } from "@/lib/auth/errors";
+import { requirePageUser } from "@/lib/auth/guards";
 import { listHouseholdHistory } from "@/lib/history/queries";
 import { getHousehold } from "@/lib/households/queries";
 
@@ -22,6 +23,7 @@ export default async function HistoryPage({
 }: PageProps<"/households/[householdId]/history">) {
   const { householdId } = await params;
   const { q } = await searchParams;
+  await requirePageUser();
   const query = typeof q === "string" ? q : undefined;
 
   let household;

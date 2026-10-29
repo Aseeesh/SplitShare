@@ -13,8 +13,13 @@ export const metadata: Metadata = {
 };
 
 /** The page every invitation email links to (§40 step 2). */
-export default async function InvitePage({ params }: PageProps<"/invite/[token]">) {
+export default async function InvitePage({
+  params,
+  searchParams,
+}: PageProps<"/invite/[token]">) {
   const { token } = await params;
+  const { error } = await searchParams;
+  const errorMessage = typeof error === "string" ? error : null;
   const [invitation, user] = await Promise.all([
     previewInvitation(token),
     getOptionalUser(),
@@ -75,6 +80,12 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
         <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-600/20 ring-inset dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-400/20">
           This invitation was sent to {invitation.email}, and you are signed in as{" "}
           {user.email}. You can still accept it.
+        </p>
+      ) : null}
+
+      {errorMessage ? (
+        <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">
+          {errorMessage}
         </p>
       ) : null}
 

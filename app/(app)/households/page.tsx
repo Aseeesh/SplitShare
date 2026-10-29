@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ArchivedHouseholds } from "@/components/households/archived-households";
+import { requirePageUser } from "@/lib/auth/guards";
 import { listArchivedHouseholds, listHouseholds } from "@/lib/households/queries";
 import { listKnownPeople } from "@/lib/overview/queries";
 import { formatSignedMoney } from "@/lib/money";
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
  * nothing here links into one.
  */
 export default async function HouseholdsPage() {
+  await requirePageUser();
   const [households, archived, people] = await Promise.all([
     listHouseholds(),
     listArchivedHouseholds(),

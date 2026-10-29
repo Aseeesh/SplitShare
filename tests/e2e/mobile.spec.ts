@@ -39,7 +39,9 @@ async function checkScreen(page: Page, label: string) {
 
   // Scroll to the bottom: the last content must sit above the fixed tab bar.
   const clearance = await page.evaluate(() => {
-    window.scrollTo(0, document.body.scrollHeight);
+    // Instant, not smooth: the page sets scroll-behavior: smooth, so a long page
+    // would still be mid-scroll when measured.
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" });
     const nav = document.querySelector("nav[aria-label]:not([aria-label='App'] ~ *)");
     const bars = [...document.querySelectorAll("nav")].filter(
       (n) => getComputedStyle(n).position === "fixed",

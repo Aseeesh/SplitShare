@@ -97,11 +97,21 @@ export async function changeRole(input: unknown): Promise<ActionResult<null>> {
       where: {
         householdId_userId: { householdId: data.householdId, userId: data.userId },
       },
-      select: { id: true, role: true, removedAt: true },
+      select: {
+        id: true,
+        role: true,
+        removedAt: true,
+        user: { select: { isPlaceholder: true } },
+      },
     });
 
     if (!target || target.removedAt !== null) {
       return fail("WRONG_HOUSEHOLD", "Not found");
+    }
+    // §8a — a placeholder cannot sign in, so admin rights would be authority
+    // nobody can exercise.
+    if (target.user.isPlaceholder && data.role !== "MEMBER") {
+      return fail("CONFLICT", "A tracked member is always a member.");
     }
     if (target.role === data.role) {
       return ok(null);

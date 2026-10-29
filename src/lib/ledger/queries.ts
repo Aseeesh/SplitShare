@@ -54,6 +54,10 @@ export async function getPairLedger(householdId: string): Promise<PairLedger> {
         method: "OFFSET",
         confirmation: { is: null },
         reversedBy: { is: null },
+        // A withdrawal writes unconfirmed reversal legs; they are not proposals.
+        reversesPaymentId: null,
+        // An expired proposal can no longer be accepted, and must not block a new one.
+        paidAt: { gt: offsetProposalCutoff() },
       },
       select: {
         reference: true,

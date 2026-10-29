@@ -10,7 +10,7 @@ import { PaymentStatusBadge } from "@/components/ui/badge";
 import { Card, EmptyState } from "@/components/ui/card";
 import { Money } from "@/components/ui/money";
 import { NotAMemberError } from "@/lib/auth/errors";
-import { requireAuth } from "@/lib/auth/guards";
+import { requirePageUser } from "@/lib/auth/guards";
 import { getHousehold } from "@/lib/households/queries";
 import { getPairLedger } from "@/lib/ledger/queries";
 import { listPayments, listPaymentsAwaitingYou } from "@/lib/payments/queries";
@@ -22,7 +22,7 @@ export default async function PaymentsPage({
   params,
 }: PageProps<"/households/[householdId]/payments">) {
   const { householdId } = await params;
-  const viewer = await requireAuth();
+  const viewer = await requirePageUser();
 
   let household;
   try {

@@ -9,7 +9,7 @@ import { AppHeader } from "@/components/layout/app-header";
 import { HouseholdNav } from "@/components/layout/household-nav";
 import { NotAMemberError } from "@/lib/auth/errors";
 import { getExpense } from "@/lib/expenses/queries";
-import { hasCapability, requireAuth } from "@/lib/auth/guards";
+import { hasCapability, requirePageUser } from "@/lib/auth/guards";
 import { getHousehold } from "@/lib/households/queries";
 
 export const metadata: Metadata = { title: "Expense" };
@@ -34,7 +34,7 @@ export default async function ExpensePage({
     notFound();
   }
 
-  const viewerId = (await requireAuth()).id;
+  const viewerId = (await requirePageUser()).id;
   const own = expense.createdByUserId === viewerId;
   const [canDelete, canEdit] = await Promise.all([
     hasCapability(householdId, own ? "DELETE_OWN_EXPENSE" : "DELETE_ANY_EXPENSE"),

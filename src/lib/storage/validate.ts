@@ -19,7 +19,11 @@ export const ALLOWED_RECEIPT_TYPES: Record<ReceiptContentType, string> = {
   "application/pdf": "pdf",
 };
 
-export const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+/**
+ * 4MB, not more: a receipt travels inside a Server Action request, which Vercel
+ * caps at 4.5MB (and `serverActions.bodySizeLimit` in next.config.ts mirrors).
+ */
+export const DEFAULT_MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 export type UploadErrorCode =
   "EMPTY_FILE" | "TOO_LARGE" | "UNSUPPORTED_TYPE" | "CONTENT_MISMATCH";

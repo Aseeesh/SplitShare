@@ -7,6 +7,10 @@ initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
   experimental: {
+    // Server Actions are capped at 1MB by default, which rejected every phone
+    // photo. Kept under Vercel's 4.5MB request limit; the app's own receipt
+    // limit (DEFAULT_MAX_UPLOAD_BYTES) leaves room for multipart overhead.
+    serverActions: { bodySizeLimit: "4.4mb" },
     // Turns on offline connectivity detection plus automatic retry of blocked
     // navigation, prefetch and Server Action requests, and enables the
     // `useOffline` hook (which returns false without it). Worth having on a

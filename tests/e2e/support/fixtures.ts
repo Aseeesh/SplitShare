@@ -97,3 +97,28 @@ export async function signInAsPerson(page: Page, person: FixturePerson): Promise
     },
   ]);
 }
+
+/** A brand-new super user (`users.is_super_user`) with a live session and no group. */
+export async function createSuperUser(name = "Root"): Promise<FixturePerson> {
+  const tag = randomUUID().slice(0, 8);
+  const id = randomUUID();
+  const email = `${name.toLowerCase()}.${tag}@example.test`;
+  const token = `e2e-${tag}-${name.toLowerCase()}`;
+  const client = new Client({ connectionString: process.env.E2E_DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query(
+      `INSERT INTO users (id, name, email, email_verified, is_super_user, updated_at)
+       VALUES ($1, $2, $3, now(), true, now())`,
+      [id, name, email],
+    );
+    await client.query(
+      `INSERT INTO sessions (id, session_token, user_id, expires)
+       VALUES ($1, $2, $3, now() + interval '7 days')`,
+      [randomUUID(), token, id],
+    );
+  } finally {
+    await client.end();
+  }
+  return { id, name, email, token };
+}

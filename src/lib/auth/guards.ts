@@ -1,5 +1,6 @@
 import "server-only";
 
+import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import type { HouseholdRole, HouseholdStatus } from "@/generated/prisma/enums";
@@ -87,6 +88,18 @@ export const requireAuth = cache(async (): Promise<AuthenticatedUser> => {
     isSuperUser: account.isSuperUser,
   };
 });
+
+/**
+ * Page-level (a): like `requireAuth`, but a signed-out visitor is sent to sign
+ * in instead of hitting the error boundary. Server actions keep `requireAuth`.
+ */
+export async function requirePageUser(): Promise<AuthenticatedUser> {
+  const user = await getOptionalUser();
+  if (!user) {
+    redirect("/signin");
+  }
+  return user;
+}
 
 /** Platform-level gate for the admin console and its actions. */
 export async function requireSuperUser(): Promise<AuthenticatedUser> {

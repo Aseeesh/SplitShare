@@ -13,7 +13,7 @@ import { DefaultSplitSetting } from "@/components/households/default-split-setti
 import { Card, CardHeader } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { NotAMemberError } from "@/lib/auth/errors";
-import { requireAuth } from "@/lib/auth/guards";
+import { requirePageUser } from "@/lib/auth/guards";
 import { getMonthlySpending, getSpendingByCategory } from "@/lib/expenses/analytics";
 import { listAwaitingYourAction, listExpenses } from "@/lib/expenses/queries";
 import { getHousehold } from "@/lib/households/queries";
@@ -34,7 +34,7 @@ export default async function HouseholdPage({
   params,
 }: PageProps<"/households/[householdId]">) {
   const { householdId } = await params;
-  const viewer = await requireAuth();
+  const viewer = await requirePageUser();
 
   let household;
   try {
@@ -73,7 +73,9 @@ export default async function HouseholdPage({
           viewerUserId={viewer.id}
         />
 
-        <AwaitingActionList householdId={householdId} items={awaiting} />
+        {household.capabilities.includes("ACCEPT_OWN_SPLIT") ? (
+          <AwaitingActionList householdId={householdId} items={awaiting} />
+        ) : null}
 
         <SettleUpPlan
           members={household.members}
