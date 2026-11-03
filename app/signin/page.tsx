@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { PasskeySignIn } from "@/components/auth/passkey-sign-in";
 import { GoogleIcon } from "@/components/auth/google-icon";
 import { getOptionalUser } from "@/lib/auth/guards";
 
@@ -71,6 +72,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
               Continue with Google
             </button>
           </form>
+          <PasskeySignIn redirectTo={redirectTo} />
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-500 dark:text-slate-500">

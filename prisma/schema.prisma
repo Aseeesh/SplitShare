@@ -183,6 +183,7 @@ model User {
 
   accounts Account[]
   sessions Session[]
+  authenticators Authenticator[]
 
   // Restrict, not the default SetNull: nulling the manager would leave a
   // placeholder with nobody able to act for it, which the CHECK constraint
@@ -236,6 +237,26 @@ model Account {
   @@unique([provider, providerAccountId])
   @@index([userId])
   @@map("accounts")
+}
+
+/// A passkey (WebAuthn credential). Only the public key is stored, so a leaked
+/// table cannot be used to sign in.
+model Authenticator {
+  id                   String   @id @default(uuid(7)) @db.Uuid
+  credentialID         String   @unique @map("credential_id")
+  userId               String   @map("user_id") @db.Uuid
+  providerAccountId    String   @map("provider_account_id")
+  credentialPublicKey  String   @map("credential_public_key")
+  counter              Int
+  credentialDeviceType String   @map("credential_device_type")
+  credentialBackedUp   Boolean  @map("credential_backed_up")
+  transports           String?
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("authenticators")
 }
 
 model Session {

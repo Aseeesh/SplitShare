@@ -3,6 +3,7 @@ import "server-only";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
+import Passkey from "next-auth/providers/passkey";
 
 import { prisma } from "@/lib/db/client";
 
@@ -15,7 +16,13 @@ import { prisma } from "@/lib/db/client";
  */
 export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "database" },
+  // A year, extended on use (at most once a day), so somebody who opens the app
+  // now and then is not asked to sign in again. Signing out or suspending an
+  // account still ends the session immediately because it is a database row.
+  session: { strategy: "database", maxAge: 60 * 60 * 24 * 365, updateAge: 60 * 60 * 24 },
+  // Passkeys are an Auth.js experimental feature; they need the Authenticator
+  // table (see prisma/schema.prisma).
+  experimental: { enableWebAuthn: true },
   pages: { signIn: "/signin" },
   // Vercel serves HTTPS but Auth.js sometimes mis-detects the request protocol
   // (server action vs route handler), which desyncs the `__Secure-` cookie names
@@ -31,6 +38,10 @@ export const authConfig: NextAuthConfig = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       allowDangerousEmailAccountLinking: false,
     }),
+    // Registered from the profile page by a signed-in user; used on the sign-in
+    // page to skip Google. Never creates accounts: the sign-in page only offers
+    // the "authenticate" action, so a passkey cannot mint a new user.
+    Passkey({ enableConditionalUI: false }),
   ],
   events: {
     /**

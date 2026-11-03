@@ -27,6 +27,7 @@ const TABLES = [
   "categories",
   "invitations",
   "file_uploads",
+  "authenticators",
   "household_members",
   "households",
   "sessions",

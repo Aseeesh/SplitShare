@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PasskeyManager } from "@/components/profile/passkey-manager";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { Card } from "@/components/ui/card";
 import { getOptionalUser } from "@/lib/auth/guards";
+import { prisma } from "@/lib/db/client";
 import { listHouseholds } from "@/lib/households/queries";
 
 export const metadata: Metadata = { title: "Your profile" };
@@ -15,7 +17,19 @@ export default async function ProfilePage() {
   if (!user) {
     redirect("/signin");
   }
-  const households = await listHouseholds();
+  const [households, passkeys] = await Promise.all([
+    listHouseholds(),
+    prisma.authenticator.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        createdAt: true,
+        credentialDeviceType: true,
+        credentialBackedUp: true,
+      },
+    }),
+  ]);
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 p-6">
@@ -38,6 +52,18 @@ export default async function ProfilePage() {
             </Link>
           </p>
         ) : null}
+      </Card>
+
+      <Card className="p-4">
+        <h2 className="mb-2 text-sm font-semibold tracking-tight">Passkeys</h2>
+        <PasskeyManager
+          passkeys={passkeys.map((key) => ({
+            id: key.id,
+            createdAt: key.createdAt.toISOString(),
+            deviceType: key.credentialDeviceType,
+            backedUp: key.credentialBackedUp,
+          }))}
+        />
       </Card>
 
       <Card className="p-4">
