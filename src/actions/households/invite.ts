@@ -100,7 +100,7 @@ export async function inviteMember(
     });
 
     const acceptUrl = buildInvitationUrl(await appBaseUrl(), token);
-    const emailSent = await sendInvitationEmail(
+    const delivery = await sendInvitationEmail(
       { email: data.email },
       {
         householdName: result.householdName,
@@ -109,6 +109,29 @@ export async function inviteMember(
         expiresAt: result.invitation.expiresAt,
       },
     );
+
+    const emailSent = delivery.sent;
+
+    // Vercel keeps runtime logs for about an hour, so the outcome of every
+    // invitation email is also written to the audit trail. Best effort: failing
+    // to record it must not fail an invitation that already exists.
+    try {
+      await prisma.$transaction((tx) =>
+        writeAuditLog(tx, {
+          householdId: data.householdId,
+          actorUserId: membership.userId,
+          action: delivery.sent ? "INVITATION_EMAIL_SENT" : "INVITATION_EMAIL_FAILED",
+          entityType: "invitation",
+          entityId: result.invitation.id,
+          after: {
+            email: data.email,
+            ...(delivery.error ? { error: delivery.error } : {}),
+          },
+        }),
+      );
+    } catch (error) {
+      console.error("[invite] could not record the email outcome", error);
+    }
 
     revalidatePath(`/households/${data.householdId}/members`);
     // Returned to the admin so they can share the link themselves: email is

@@ -132,25 +132,49 @@ export function emailProvider(): EmailProvider {
 }
 
 /** Swallows provider failures (returning whether the message really went out) — see the note on best-effort sending above. */
-async function deliver(to: EmailRecipient | null, body: EmailBody): Promise<boolean> {
+export interface DeliveryResult {
+  sent: boolean;
+  /** Why it did not go out. Safe to store: a code and a trimmed provider message, never a credential. */
+  error?: string;
+}
+
+function describeFailure(error: unknown): string {
+  if (error instanceof Error) {
+    const detail = error as Error & { code?: unknown; responseCode?: unknown };
+    const parts = [detail.code, detail.responseCode].filter(
+      (part): part is string | number =>
+        typeof part === "string" || typeof part === "number",
+    );
+    return `${parts.join(" ")} ${error.message}`.trim().slice(0, 300);
+  }
+  return "unknown error";
+}
+
+async function deliver(
+  to: EmailRecipient | null,
+  body: EmailBody,
+): Promise<DeliveryResult> {
   if (!to?.email) {
-    return false;
+    return { sent: false, error: "no recipient" };
   }
   try {
     const provider = emailProvider();
     await provider.send(to, body);
     // The logging provider "succeeds" without sending anything.
-    return !(provider instanceof LoggingEmailProvider);
+    if (provider instanceof LoggingEmailProvider) {
+      return { sent: false, error: "no email provider configured" };
+    }
+    return { sent: true };
   } catch (error) {
     console.error(`[email] failed to send "${body.subject}"`, error);
-    return false;
+    return { sent: false, error: describeFailure(error) };
   }
 }
 
 export async function sendInvitationEmail(
   to: EmailRecipient,
   input: Parameters<typeof invitationEmail>[0],
-): Promise<boolean> {
+): Promise<DeliveryResult> {
   return deliver(to, invitationEmail(input));
 }
 

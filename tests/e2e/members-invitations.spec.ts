@@ -69,6 +69,21 @@ test.describe("§23 invitations: create and revoke from the members page", () =>
     ).toBeVisible();
     const link = await page.getByLabel("Invitation link").inputValue();
     expect(link).toContain("/invite/");
+    // The link points at the origin the admin is using, not a configured URL.
+    expect(new URL(link).origin).toBe(new URL(page.url()).origin);
+
+    // The email outcome is recorded (mail is blanked in e2e, so it is a failure
+    // with the reason), because runtime logs only last about an hour.
+    const outcome = await query<{ action: string; after_json: { error?: string } }>(
+      `SELECT action, after_json FROM audit_logs
+        WHERE household_id=$1 AND action IN ('INVITATION_EMAIL_SENT','INVITATION_EMAIL_FAILED')`,
+      [g.id],
+    );
+    expect(outcome).toHaveLength(1);
+    expect(outcome[0]).toMatchObject({
+      action: "INVITATION_EMAIL_FAILED",
+      after_json: { error: "no email provider configured" },
+    });
 
     await expect(page.getByText(email, { exact: true })).toBeVisible();
     const rows = await query<{ status: string; role: string; token_hash: string }>(

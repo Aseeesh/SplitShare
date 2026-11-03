@@ -114,6 +114,8 @@ enum InvitationStatus {
 /// §11 — every financial state transition writes one of these.
 enum AuditAction {
   HOUSEHOLD_CREATED
+  INVITATION_EMAIL_SENT
+  INVITATION_EMAIL_FAILED
   HOUSEHOLD_UPDATED
   USER_DISABLED
   USER_ENABLED
