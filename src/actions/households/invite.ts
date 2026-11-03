@@ -14,6 +14,7 @@ import {
   hashInvitationToken,
   invitationExpiresAt,
 } from "@/lib/invitations/token";
+import { appBaseUrl } from "@/lib/invitations/base-url";
 import { consumeRateLimit } from "@/lib/rate-limit";
 
 import { inviteMemberSchema, revokeInvitationSchema } from "./schema";
@@ -29,7 +30,9 @@ import { inviteMemberSchema, revokeInvitationSchema } from "./schema";
  */
 export async function inviteMember(
   input: unknown,
-): Promise<ActionResult<{ invitationId: string; acceptUrl: string }>> {
+): Promise<
+  ActionResult<{ invitationId: string; acceptUrl: string; emailSent: boolean }>
+> {
   try {
     const data = inviteMemberSchema.parse(input);
     const membership = await requireCapability(data.householdId, "MANAGE_MEMBERS");
@@ -96,9 +99,8 @@ export async function inviteMember(
       return { invitation, householdName: household.name };
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const acceptUrl = buildInvitationUrl(appUrl, token);
-    await sendInvitationEmail(
+    const acceptUrl = buildInvitationUrl(await appBaseUrl(), token);
+    const emailSent = await sendInvitationEmail(
       { email: data.email },
       {
         householdName: result.householdName,
@@ -111,7 +113,7 @@ export async function inviteMember(
     revalidatePath(`/households/${data.householdId}/members`);
     // Returned to the admin so they can share the link themselves: email is
     // optional (no provider configured) and often lands in spam.
-    return ok({ invitationId: result.invitation.id, acceptUrl });
+    return ok({ invitationId: result.invitation.id, acceptUrl, emailSent });
   } catch (error) {
     return toActionResult(error);
   }

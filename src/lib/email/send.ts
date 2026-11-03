@@ -131,23 +131,27 @@ export function emailProvider(): EmailProvider {
   return cachedProvider;
 }
 
-/** Swallows provider failures — see the note on best-effort sending above. */
-async function deliver(to: EmailRecipient | null, body: EmailBody): Promise<void> {
+/** Swallows provider failures (returning whether the message really went out) — see the note on best-effort sending above. */
+async function deliver(to: EmailRecipient | null, body: EmailBody): Promise<boolean> {
   if (!to?.email) {
-    return;
+    return false;
   }
   try {
-    await emailProvider().send(to, body);
+    const provider = emailProvider();
+    await provider.send(to, body);
+    // The logging provider "succeeds" without sending anything.
+    return !(provider instanceof LoggingEmailProvider);
   } catch (error) {
     console.error(`[email] failed to send "${body.subject}"`, error);
+    return false;
   }
 }
 
 export async function sendInvitationEmail(
   to: EmailRecipient,
   input: Parameters<typeof invitationEmail>[0],
-): Promise<void> {
-  await deliver(to, invitationEmail(input));
+): Promise<boolean> {
+  return deliver(to, invitationEmail(input));
 }
 
 export async function sendExpenseCreatedEmail(

@@ -56,11 +56,15 @@ export function AddMember({
 
       // One at a time: each invite is its own audited, rate-limited action.
       const sent: Array<{ url: string; email: string }> = [];
+      const unemailed: string[] = [];
       const failed: string[] = [];
       for (const person of picked) {
         const result = await inviteMember({ householdId, email: person.email });
         if (result.ok) {
           sent.push({ url: result.data.acceptUrl, email: person.email });
+          if (!result.data.emailSent) {
+            unemailed.push(person.email);
+          }
         } else {
           failed.push(`${person.label}: ${result.message}`);
         }
@@ -75,9 +79,11 @@ export function AddMember({
       }
       if (sent.length > 0) {
         setMessage(
-          sent.length === 1
-            ? "Invitation created. Share the link below."
-            : `${sent.length} invitations created. Share each link below.`,
+          unemailed.length > 0
+            ? `Invitation created, but the email could not be sent to ${unemailed.join(", ")}. Share the link below yourself.`
+            : sent.length === 1
+              ? "Invitation created. Share the link below."
+              : `${sent.length} invitations created. Share each link below.`,
         );
         router.refresh();
       }
