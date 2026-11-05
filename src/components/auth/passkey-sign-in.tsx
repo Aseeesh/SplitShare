@@ -28,14 +28,14 @@ export function PasskeySignIn({ redirectTo }: { redirectTo: string }) {
   }
 
   return (
-    <div className="mt-3">
+    <div className="mt-6">
       <button
         type="button"
         onClick={run}
         disabled={busy}
-        className="flex w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-white dark:hover:bg-slate-800"
+        className="flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
       >
-        {busy ? "Waiting for passkey…" : "Sign in with a passkey"}
+        {busy ? "Waiting for passkey…" : "Sign in with Face ID / fingerprint"}
       </button>
       {error ? (
         <p role="alert" className="mt-2 text-xs text-red-700 dark:text-red-300">

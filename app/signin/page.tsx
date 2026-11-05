@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { PasswordSignIn } from "@/components/auth/password-sign-in";
 import { PasskeySignIn } from "@/components/auth/passkey-sign-in";
 import { GoogleIcon } from "@/components/auth/google-icon";
 import { getOptionalUser } from "@/lib/auth/guards";
@@ -23,6 +24,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   AccessDenied: "You declined the Google sign-in request.",
   OAuthAccountNotLinked:
     "That email is already registered with a different sign-in method.",
+  PasswordInvalid: "That email and password did not match.",
+  PasswordRateLimited: "Too many attempts. Wait a few minutes and try again.",
   Verification: "That sign-in link has expired. Request a new one.",
 };
 
@@ -62,7 +65,9 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
             </p>
           ) : null}
 
-          <form className="mt-6" method="POST" action="/api/oauth/google">
+          <PasskeySignIn redirectTo={redirectTo} />
+
+          <form className="mt-3" method="POST" action="/api/oauth/google">
             <input type="hidden" name="callbackUrl" value={redirectTo} />
             <button
               type="submit"
@@ -72,7 +77,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
               Continue with Google
             </button>
           </form>
-          <PasskeySignIn redirectTo={redirectTo} />
+          <PasswordSignIn redirectTo={redirectTo} />
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-500 dark:text-slate-500">

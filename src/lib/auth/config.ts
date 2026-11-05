@@ -41,7 +41,17 @@ export const authConfig: NextAuthConfig = {
     // Registered from the profile page by a signed-in user; used on the sign-in
     // page to skip Google. Never creates accounts: the sign-in page only offers
     // the "authenticate" action, so a passkey cannot mint a new user.
-    Passkey({ enableConditionalUI: false }),
+    Passkey({
+      enableConditionalUI: false,
+      // "Just Face ID / fingerprint": the credential must be discoverable (so no
+      // email is typed first) and every use must pass biometrics or the PIN.
+      registrationOptions: {
+        authenticatorSelection: { residentKey: "required", userVerification: "required" },
+      },
+      authenticationOptions: { userVerification: "required" },
+      verifyRegistrationOptions: { requireUserVerification: true },
+      verifyAuthenticationOptions: { requireUserVerification: true },
+    }),
   ],
   events: {
     /**

@@ -178,6 +178,9 @@ model User {
   isSuperUser   Boolean   @default(false) @map("is_super_user")
   /// A super user can suspend an account; it keeps its history but cannot sign in.
   disabledAt    DateTime? @map("disabled_at")
+  /// scrypt hash (see src/lib/auth/password.ts). Set by the user from their
+  /// profile once signed in; null means password sign-in is not enabled.
+  passwordHash  String?   @map("password_hash")
   /// Per-admin override of the platform's households-per-admin limit.
   maxHouseholdsOverride Int? @map("max_households_override")
   createdAt     DateTime  @default(now()) @map("created_at")

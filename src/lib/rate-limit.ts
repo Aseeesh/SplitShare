@@ -29,9 +29,18 @@ export interface RateLimitResult {
 export const RATE_LIMITS = {
   CREATE_EXPENSE: { limit: 30, windowMs: 60_000 },
   INVITE_MEMBER: { limit: 10, windowMs: 60 * 60_000 },
+  PASSWORD_LOGIN: { limit: 8, windowMs: 15 * 60_000 },
+  SET_PASSWORD: { limit: 5, windowMs: 15 * 60_000 },
 } as const satisfies Record<string, RateLimitRule>;
 
 export type RateLimitedAction = keyof typeof RATE_LIMITS;
+
+const RATE_LIMIT_NOUN: Record<RateLimitedAction, string> = {
+  CREATE_EXPENSE: "expenses",
+  INVITE_MEMBER: "invitations",
+  PASSWORD_LOGIN: "sign-in attempts",
+  SET_PASSWORD: "password changes",
+};
 
 export interface RateLimitStore {
   consume(key: string, rule: RateLimitRule): RateLimitResult;
@@ -105,7 +114,7 @@ export function consumeRateLimit(
   if (!result.allowed) {
     throw new RateLimitedError(
       result.retryAfterMs,
-      `Too many ${action === "INVITE_MEMBER" ? "invitations" : "expenses"} in a short time. ` +
+      `Too many ${RATE_LIMIT_NOUN[action]} in a short time. ` +
         `Try again in ${Math.ceil(result.retryAfterMs / 1000)}s.`,
     );
   }

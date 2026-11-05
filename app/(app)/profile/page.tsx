@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PasswordForm } from "@/components/profile/password-form";
 import { PasskeyManager } from "@/components/profile/passkey-manager";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { Card } from "@/components/ui/card";
@@ -17,7 +18,7 @@ export default async function ProfilePage() {
   if (!user) {
     redirect("/signin");
   }
-  const [households, passkeys] = await Promise.all([
+  const [households, passkeys, credentials] = await Promise.all([
     listHouseholds(),
     prisma.authenticator.findMany({
       where: { userId: user.id },
@@ -29,6 +30,7 @@ export default async function ProfilePage() {
         credentialBackedUp: true,
       },
     }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } }),
   ]);
 
   return (
@@ -52,6 +54,11 @@ export default async function ProfilePage() {
             </Link>
           </p>
         ) : null}
+      </Card>
+
+      <Card className="p-4">
+        <h2 className="mb-2 text-sm font-semibold tracking-tight">Password</h2>
+        <PasswordForm hasPassword={credentials?.passwordHash != null} />
       </Card>
 
       <Card className="p-4">
