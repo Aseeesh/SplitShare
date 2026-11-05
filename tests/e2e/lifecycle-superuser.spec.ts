@@ -100,6 +100,8 @@ test.describe("§23 suspending users", () => {
     await bob.goto(`/households/${g.id}`);
     await expect(bob.getByText(g.name)).toHaveCount(0);
     await bob.goto("/households");
+    // Wait for the signed-out redirect to land, so the next goto does not abort it.
+    await bob.waitForURL(/\/signin/);
     await expect(bob.getByLabel("Group name")).toHaveCount(0);
     await bob.goto("/");
     await expect(bob.getByText(/^Hi Bob/)).toHaveCount(0);
