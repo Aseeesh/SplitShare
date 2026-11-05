@@ -19,8 +19,11 @@ export async function POST(req: Request) {
   const redirectTo = safeRedirectPath(form.get("callbackUrl"));
 
   const origin = new URL(req.url).origin;
-  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const result = await passwordLogin(email, password, forwarded ?? "unknown");
+  const client =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip")?.trim() ||
+    null;
+  const result = await passwordLogin(email, password, client);
 
   if (!result.ok) {
     const code =

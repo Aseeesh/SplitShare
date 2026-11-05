@@ -42,7 +42,7 @@ export type PasswordLoginResult =
 export async function passwordLogin(
   emailInput: string,
   password: string,
-  clientKey: string,
+  clientKey: string | null,
 ): Promise<PasswordLoginResult> {
   const email = emailInput.trim().toLowerCase();
   if (!email || !password || password.length > 200) {
@@ -53,7 +53,11 @@ export async function passwordLogin(
     // Per address and per client, so one address cannot be hammered from many
     // places nor one client sweep many addresses.
     consumeRateLimit("PASSWORD_LOGIN", `email:${email}`);
-    consumeRateLimit("PASSWORD_LOGIN", `client:${clientKey}`);
+    // Only when the client address is known: a shared "unknown" bucket would
+    // let one person's failures lock everybody out.
+    if (clientKey) {
+      consumeRateLimit("PASSWORD_LOGIN_CLIENT", clientKey);
+    }
   } catch (error) {
     if (error instanceof RateLimitedError) {
       return { ok: false, reason: "RATE_LIMITED" };

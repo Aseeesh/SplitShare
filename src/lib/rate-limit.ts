@@ -29,7 +29,11 @@ export interface RateLimitResult {
 export const RATE_LIMITS = {
   CREATE_EXPENSE: { limit: 30, windowMs: 60_000 },
   INVITE_MEMBER: { limit: 10, windowMs: 60 * 60_000 },
+  // Per email: the real brute-force guard for one account.
   PASSWORD_LOGIN: { limit: 8, windowMs: 15 * 60_000 },
+  // Per client address: a backstop against sweeping many emails. Generous on
+  // purpose, because a whole household shares one home-network address.
+  PASSWORD_LOGIN_CLIENT: { limit: 60, windowMs: 15 * 60_000 },
   SET_PASSWORD: { limit: 5, windowMs: 15 * 60_000 },
 } as const satisfies Record<string, RateLimitRule>;
 
@@ -39,6 +43,7 @@ const RATE_LIMIT_NOUN: Record<RateLimitedAction, string> = {
   CREATE_EXPENSE: "expenses",
   INVITE_MEMBER: "invitations",
   PASSWORD_LOGIN: "sign-in attempts",
+  PASSWORD_LOGIN_CLIENT: "sign-in attempts",
   SET_PASSWORD: "password changes",
 };
 

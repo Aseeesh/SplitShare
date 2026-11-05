@@ -38,7 +38,9 @@ test.describe("§23 password sign-in", () => {
     await p2.getByLabel("Email").fill(ann.email.toUpperCase());
     await p2.getByLabel("Password").fill("wrong-password-1");
     await p2.getByRole("button", { name: "Sign in with email" }).click();
-    await expect(p2.getByRole("alert")).toContainText("did not match");
+    await expect(
+      p2.getByRole("alert").filter({ hasText: "did not match" }),
+    ).toBeVisible();
 
     await p2.getByLabel("Email").fill(ann.email);
     await p2.getByLabel("Password").fill(password);
@@ -58,7 +60,9 @@ test.describe("§23 password sign-in", () => {
     await p3.getByLabel("Email").fill(ann.email);
     await p3.getByLabel("Password").fill(password);
     await p3.getByRole("button", { name: "Sign in with email" }).click();
-    await expect(p3.getByRole("alert")).toContainText("did not match");
+    await expect(
+      p3.getByRole("alert").filter({ hasText: "did not match" }),
+    ).toBeVisible();
     await fresh.close();
   });
 
@@ -67,7 +71,9 @@ test.describe("§23 password sign-in", () => {
     await page.getByLabel("Email").fill(`nobody.${Date.now()}@example.test`);
     await page.getByLabel("Password").fill("whatever-password");
     await page.getByRole("button", { name: "Sign in with email" }).click();
-    await expect(page.getByRole("alert")).toContainText("did not match");
+    await expect(
+      page.getByRole("alert").filter({ hasText: "did not match" }),
+    ).toBeVisible();
   });
 
   test("callbackUrl cannot redirect off-site", async ({ request }) => {
